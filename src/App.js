@@ -19,7 +19,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// --- LOGICA PERCORSO (FIX LOCALE/ONLINE) ---
+// --- FIX PERCORSO (LOCALE VS ONLINE) ---
 const BASE_URL = window.location.hostname.includes("localhost") ? "" : "/pokerole-cloud";
 
 // --- COLORI E DIZIONARI UFFICIALI ---
@@ -40,12 +40,14 @@ const tradTipi = {
 };
 
 const tradStats = { Strength: 'FORZA', Dexterity: 'DESTREZZA', Vitality: 'VITALITÀ', Special: 'SPECIALE', Insight: 'ACUME' };
+
 const tradTrainerSkills = {
   Brawl: 'Rissa', Throw: 'Lancio', Evasion: 'Evasione', Weapons: 'Armi',
   Alert: 'Allerta', Athletic: 'Atletica', Nature: 'Natura', Stealth: 'Furtività', Survival: 'Sopravvivenza',
   Allure: 'Fascino', Etiquette: 'Etichetta', Intimidate: 'Intimidire', Perform: 'Esibire',
   Lore: 'Storia/Cultura', Medicine: 'Medicina', Science: 'Scienza', Crafts: 'Artigianato', Command: 'Comandare'
 };
+
 const tradPkmSkills = {
   Brawl: 'Rissa', Channel: 'Incanalare', Clash: 'Contrasto', Evasion: 'Evasione',
   Alert: 'Allerta', Athletic: 'Atletica', Nature: 'Natura', Stealth: 'Furtività',
@@ -203,6 +205,52 @@ const tCatMosse = (cat) => cat === 'Physical' ? 'Fisico' : cat === 'Special' ? '
 const tItem = (engName) => tradStrumentiEngToIta[engName] || engName;
 const tMossa = (engName) => tradMosseEngToIta[engName] || engName;
 
+const listaStrumentiBase = [
+  "Beast Ball", "Cherish Ball", "Dive Ball", "Dream Ball", "Dusk Ball", "Fast Ball", "Friend Ball", "Greatball", 
+  "Heal Ball", "Heavy Ball", "Level Ball", "Love Ball", "Lure Ball", "Luxury Ball", "Masterball", "Moon Ball", 
+  "Nest Ball", "Net Ball", "Park Ball", "Pokeball", "Premier Ball", "Quick Ball", "Repeat Ball", "Safari Ball", 
+  "Sport Ball", "Timer Ball", "Ultraball", "Abomasite", "Absolite", "Aerodactylite", "Aggronite", "Alakazite", 
+  "Altarianite", "Ampharosite", "Audinite", "Banettite", "Beedrillite", "Blastoisinite", "Blazikenite", "Cameruptite", 
+  "Charizardite X", "Charizardite Y", "Diancite", "Galladite", "Garchompite", "Gardevoirite", "Gengarite", "Glalitite", 
+  "Gyaradosite", "Heracronite", "Houndoominite", "Kangaskhanite", "Latiasite", "Latiosite", "Lopunnite", "Lucarionite", 
+  "Manectite", "Mawilite", "Medichamite", "Metagrossite", "Mewtwonite X", "Mewtwonite Y", "Pidgeotite", "Pinsirite", 
+  "Sablenite", "Salamencite", "Sceptilite", "Scizorite", "Sharpedonite", "Slowbronite", "Steelixite", "Swampertite", 
+  "Tyranitarite", "Venusaurite", "Antidote", "Aspear Berry", "Awakening", "Berry Juice", "Burn Heal", "Cheri Berry", 
+  "Chesto Berry", "Elixir", "Energy Powder", "Energy Root", "Enigma Berry", "Ether", "Fresh Water", "Full Heal", 
+  "Full Restore", "Heal Powder", "Hyper Potion", "Ice Heal", "Lemonade", "Leppa Berry", "Lum Berry", "Max Elixir", 
+  "Max Ether", "Max Potion", "Max Revive", "Moomoo Milk", "Oran Berry", "Paralyze Heal", "Pecha Berry", "Persim Berry", 
+  "Potion", "Rawst Berry", "Revival Herb", "Revive", "Sitrus Berry", "Soda Pop", "Super Potion", "Ability Capsule", 
+  "Ability Patch", "Absorb Bulb", "Adamant Orb", "Air Balloon", "Amulet Coin", "Armor Fossil", "Assault Vest", 
+  "Big Root", "Binding Band", "Black Belt", "Black Glasses", "Black Sludge", "Bright Powder", "Cell Battery", 
+  "Charcoal", "Choice Band", "Choice Scarf", "Choice Specs", "Claw Fossil", "Cover Fossil", "Damp Rock", "Dawn Stone", 
+  "Destiny Knot", "Dome Fossil", "Draco Plate", "Dragon Fang", "Dread Plate", "Dusk Stone", "Earth Plate", "Eject Button", 
+  "Eject Pack", "Electric Seed", "Escape Rope", "Eviolite", "Expert Belt", "Fire Stone", "Fist Plate", "Flame Orb", 
+  "Flame Plate", "Float Stone", "Focus Band", "Focus Sash", "Grassy Seed", "Grip Claw", "Hard Stone", "Heat Rock", 
+  "Heavy-Duty Boots", "Helix Fossil", "Ice Stone", "Icicle Plate", "Icy Rock", "Insect Plate", "Iron Ball", "Iron Plate", 
+  "Jaw Fossil", "Kings Rock", "Leaf Stone", "Leftovers", "Life Orb", "Light Ball", "Light Clay", "Luminous Moss", 
+  "Macho Brace", "Magnet", "Meadow Plate", "Mental Herb", "Metal Coat", "Metronome", "Mind Plate", "Miracle Seed", 
+  "Misty Seed", "Moon Stone", "Muscle Band", "Mystic Water", "Never-Melt Ice", "Old Amber", "Oval Stone", "Pixie Plate", 
+  "Plume Fossil", "Poison Barb", "Power Anklet", "Power Band", "Power Belt", "Power Bracer", "Power Herb", "Power Lens", 
+  "Power Weight", "Protective Pads", "Psychic Seed", "Quick Claw", "Rare Candy", "Razor Claw", "Razor Fang", "Red Card", 
+  "Ring Target", "Rocky Helmet", "Room Service", "Root Fossil", "Rose Incense", "Safety Goggles", "Scope Lens", 
+  "Sea Incense", "Sharp Beak", "Shed Shell", "Shell Bell", "Shiny Stone", "Shock Drive", "Silk Scarf", "Silver Powder", 
+  "Skull Fossil", "Sky Plate", "Smooth Rock", "Snowball", "Soft Sand", "Spell Tag", "Splash Plate", "Spooky Plate", 
+  "Sticky Barb", "Stone Plate", "Sun Stone", "Terrain Extender", "Thick Club", "Thunder Stone", "Toxic Orb", "Toxic Plate", 
+  "Twisted Spoon", "Utility Umbrella", "Water Stone", "Wave Incense", "Weakness Policy", "White Herb", "Wide Lens", 
+  "Wise Glasses", "Zap Plate"
+];
+
+const listaPokemon = [
+  "Bulbasaur", "Ivysaur", "Venusaur", "Venusaur (Mega Form)", "Charmander", "Charmeleon", "Charizard", "Charizard (Mega X Form)", "Charizard (Mega Y Form)", "Squirtle", "Wartortle", "Blastoise", "Blastoise (Mega Form)", "Caterpie", "Metapod", "Butterfree", "Weedle", "Kakuna", "Beedrill", "Beedrill (Mega Form)", "Pidgey", "Pidgeotto", "Pidgeot", "Pidgeot (Mega Form)", "Rattata", "Rattata (Alolan Form)", "Raticate", "Raticate (Alolan Form)", "Spearow", "Fearow", "Ekans", "Arbok", "Pikachu", "Raichu", "Raichu (Alolan Form)", "Sandshrew", "Sandshrew (Alolan Form)", "Sandslash", "Sandslash (Alolan Form)", "Nidoran F", "Nidorina", "Nidoqueen", "Nidoran M", "Nidorino", "Nidoking", "Clefairy", "Clefable", "Vulpix", "Vulpix (Alolan Form)", "Ninetales", "Ninetales (Alolan Form)", "Jigglypuff", "Wigglytuff", "Zubat", "Golbat", "Oddish", "Gloom", "Vileplume", "Paras", "Parasect", "Venonat", "Venomoth", "Diglett", "Diglett (Alolan Form)", "Dugtrio", "Dugtrio (Alolan Form)", "Meowth", "Meowth (Alolan Form)", "Meowth (Galarian Form)", "Persian", "Persian (Alolan Form)", "Psyduck", "Golduck", "Mankey", "Primeape", "Growlithe", "Growlithe (Hisuian Form)", "Arcanine", "Arcanine (Hisuian Form)", "Poliwag", "Poliwhirl", "Poliwrath", "Abra", "Kadabra", "Alakazam", "Alakazam (Mega Form)", "Machop", "Machoke", "Machamp", "Bellsprout", "Weepinbell", "Victreebel", "Tentacool", "Tentacruel", "Geodude", "Geodude (Alolan Form)", "Graveler", "Graveler (Alolan Form)", "Golem", "Golem (Alolan Form)", "Ponyta", "Ponyta (Galarian Form)", "Rapidash", "Rapidash (Galarian Form)", "Slowpoke", "Slowpoke (Galarian Form)", "Slowbro", "Slowbro (Mega Form)", "Slowbro (Galarian Form)", "Magnemite", "Magneton", "Farfetch'd", "Farfetch'd (Galarian Form)", "Doduo", "Dodrio", "Seel", "Dewgong", "Grimer", "Grimer (Alolan Form)", "Muk", "Muk (Alolan Form)", "Shellder", "Cloyster", "Gastly", "Haunter", "Gengar", "Gengar (Mega Form)", "Onix", "Drowzee", "Hypno", "Krabby", "Kingler", "Voltorb", "Voltorb (Hisuian Form)", "Electrode", "Electrode (Hisuian Form)", "Exeggcute", "Exeggutor", "Exeggutor (Alolan Form)", "Cubone", "Marowak", "Marowak (Alolan Form)", "Hitmonlee", "Hitmonchan", "Lickitung", "Koffing", "Weezing", "Weezing (Galarian Form)", "Rhyhorn", "Rhydon", "Chansey", "Tangela", "Kangaskhan", "Kangaskhan (Mega Form)", "Horsea", "Seadra", "Goldeen", "Seaking", "Staryu", "Starmie", "Mr. Mime", "Mr. Mime (Galarian Form)", "Scyther", "Jynx", "Electabuzz", "Magmar", "Pinsir", "Pinsir (Mega Form)", "Tauros", "Tauros (Paldean Form)", "Magikarp", "Gyarados", "Gyarados (Mega Form)", "Lapras", "Ditto", "Eevee", "Vaporeon", "Jolteon", "Flareon", "Porygon", "Omanyte", "Omastar", "Kabuto", "Kabutops", "Aerodactyl", "Aerodactyl (Mega Form)", "Snorlax", "Articuno", "Articuno (Galarian Form)", "Zapdos", "Zapdos (Galarian Form)", "Moltres", "Moltres (Galarian Form)", "Dratini", "Dragonair", "Dragonite", "Mewtwo", "Mewtwo (Mega X Form)", "Mewtwo (Mega Y Form)", "Mew", "Chikorita", "Bayleef", "Meganium", "Cyndaquil", "Quilava", "Typhlosion", "Typhlosion (Hisuian Form)", "Totodile", "Croconaw", "Feraligatr", "Sentret", "Furret", "Hoothoot", "Noctowl", "Ledyba", "Ledian", "Spinarak", "Ariados", "Crobat", "Chinchou", "Lanturn", "Pichu", "Cleffa", "Igglybuff", "Togepi", "Togetic", "Natu", "Xatu", "Mareep", "Flaaffy", "Ampharos", "Ampharos (Mega Form)", "Bellossom", "Marill", "Azumarill", "Sudowoodo", "Politoed", "Hoppip", "Skiploom", "Jumpluff", "Aipom", "Sunkern", "Sunflora", "Yanma", "Wooper", "Wooper (Paldean Form)", "Quagsire", "Espeon", "Umbreon", "Murkrow", "Slowking", "Slowking (Galarian Form)", "Misdreavus", "Unown", "Wobbuffet", "Girafarig", "Pineco", "Forretress", "Dunsparce", "Gligar", "Steelix", "Steelix (Mega Form)", "Snubbull", "Granbull", "Qwilfish", "Qwilfish (Hisuian Form)", "Scizor", "Scizor (Mega Form)", "Shuckle", "Heracross", "Heracross (Mega Form)", "Sneasel", "Sneasel (Hisuian Form)", "Teddiursa", "Ursaring", "Slugma", "Magcargo", "Swinub", "Piloswine", "Corsola", "Corsola (Galarian Form)", "Remoraid", "Octillery", "Delibird", "Mantine", "Skarmory", "Houndour", "Houndoom", "Houndoom (Mega Form)", "Kingdra", "Phanpy", "Donphan", "Porygon2", "Stantler", "Smeargle", "Tyrogue", "Hitmontop", "Smoochum", "Elekid", "Magby", "Miltank", "Blissey", "Raikou", "Entei", "Suicune", "Larvitar", "Pupitar", "Tyranitar", "Tyranitar (Mega Form)", "Lugia", "Ho-Oh", "Celebi", "Treecko", "Grovyle", "Sceptile", "Sceptile (Mega Form)", "Torchic", "Combusken", "Blaziken", "Blaziken (Mega Form)", "Mudkip", "Marshtomp", "Swampert", "Swampert (Mega Form)", "Poochyena", "Mightyena", "Zigzagoon", "Zigzagoon (Galarian Form)", "Linoone", "Linoone (Galarian Form)", "Wurmple", "Silcoon", "Beautifly", "Cascoon", "Dustox", "Lotad", "Lombre", "Ludicolo", "Seedot", "Nuzleaf", "Shiftry", "Taillow", "Swellow", "Wingull", "Pelipper", "Ralts", "Kirlia", "Gardevoir", "Gardevoir (Mega Form)", "Surskit", "Masquerain", "Shroomish", "Breloom", "Slakoth", "Vigoroth", "Slaking", "Nincada", "Ninjask", "Shedinja", "Whismur", "Loudred", "Exploud", "Makuhita", "Hariyama", "Azurill", "Nosepass", "Skitty", "Delcatty", "Sableye", "Sableye (Mega Form)", "Mawile", "Mawile (Mega Form)", "Aron", "Lairon", "Aggron", "Aggron (Mega Form)", "Meditite", "Medicham", "Medicham (Mega Form)", "Electrike", "Manectric", "Manectric (Mega Form)", "Plusle", "Minun", "Volbeat", "Illumise", "Roselia", "Gulpin", "Swalot", "Carvanha", "Sharpedo", "Sharpedo (Mega Form)", "Wailmer", "Wailord", "Numel", "Camerupt", "Camerupt (Mega Form)", "Torkoal", "Spoink", "Grumpig", "Spinda", "Trapinch", "Vibrava", "Flygon", "Cacnea", "Cacturne", "Swablu", "Altaria", "Altaria (Mega Form)", "Zangoose", "Seviper", "Lunatone", "Solrock", "Barboach", "Whiscash", "Corphish", "Crawdaunt", "Baltoy", "Claydol", "Lileep", "Cradily", "Anorith", "Armaldo", "Feebas", "Milotic", "Castform", "Kecleon", "Shuppet", "Banette", "Banette (Mega Form)", "Duskull", "Dusclops", "Tropius", "Chimecho", "Absol", "Absol (Mega Form)", "Wynaut", "Snorunt", "Glalie", "Glalie (Mega Form)", "Spheal", "Sealeo", "Walrein", "Clamperl", "Huntail", "Gorebyss", "Relicanth", "Luvdisc", "Bagon", "Shelgon", "Salamence", "Salamence (Mega Form)", "Beldum", "Metang", "Metagross", "Metagross (Mega Form)", "Regirock", "Regice", "Registeel", "Latias", "Latias (Mega Form)", "Latios", "Latios (Mega Form)", "Kyogre", "Groudon", "Rayquaza", "Rayquaza (Mega Form)", "Jirachi", "Deoxys", "Turtwig", "Grotle", "Torterra", "Chimchar", "Monferno", "Infernape", "Piplup", "Prinplup", "Empoleon", "Starly", "Staravia", "Staraptor", "Bidoof", "Bibarel", "Kricketot", "Kricketune", "Shinx", "Luxio", "Luxray", "Budew", "Roserade", "Cranidos", "Rampardos", "Shieldon", "Bastiodon", "Burmy", "Wormadam", "Mothim", "Combee", "Vespiquen", "Pachirisu", "Buizel", "Floatzel", "Cherubi", "Cherrim", "Shellos", "Gastrodon", "Ambipom", "Drifloon", "Drifblim", "Buneary", "Lopunny", "Lopunny (Mega Form)", "Mismagius", "Honchkrow", "Glameow", "Purugly", "Chingling", "Stunky", "Skuntank", "Bronzor", "Bronzong", "Bonsly", "Mime Jr.", "Happiny", "Chatot", "Spiritomb", "Gible", "Gabite", "Garchomp", "Garchomp (Mega Form)", "Munchlax", "Riolu", "Lucario", "Lucario (Mega Form)", "Hippopotas", "Hippowdon", "Skorupi", "Drapion", "Croagunk", "Toxicroak", "Carnivine", "Finneon", "Lumineon", "Mantyke", "Snover", "Abomasnow", "Abomasnow (Mega Form)", "Weavile", "Magnezone", "Lickilicky", "Rhyperior", "Tangrowth", "Electivire", "Magmortar", "Togekiss", "Yanmega", "Leafeon", "Glaceon", "Gliscor", "Mamoswine", "Porygon-Z", "Gallade", "Gallade (Mega Form)", "Probopass", "Dusknoir", "Froslass", "Rotom", "Uxie", "Mesprit", "Azelf", "Dialga", "Palkia", "Heatran", "Regigigas", "Giratina", "Cresselia", "Phione", "Manaphy", "Darkrai", "Shaymin", "Arceus", "Victini", "Snivy", "Servine", "Serperior", "Tepig", "Pignite", "Emboar", "Oshawott", "Dewott", "Samurott", "Samurott (Hisuian Form)", "Patrat", "Watchog", "Lillipup", "Herdier", "Stoutland", "Purrloin", "Liepard", "Pansage", "Simisage", "Pansear", "Simisear", "Panpour", "Simipour", "Munna", "Musharna", "Pidove", "Tranquill", "Unfezant", "Blitzle", "Zebstrika", "Roggenrola", "Boldore", "Gigalith", "Woobat", "Swoobat", "Drilbur", "Excadrill", "Audino", "Audino (Mega Form)", "Timburr", "Gurdurr", "Conkeldurr", "Tympole", "Palpitoad", "Seismitoad", "Throh", "Sawk", "Sewaddle", "Swadloon", "Leavanny", "Venipede", "Whirlipede", "Scolipede", "Cottonee", "Whimsicott", "Petilil", "Lilligant", "Lilligant (Hisuian Form)", "Basculin", "Sandile", "Krokorok", "Krookodile", "Darumaka", "Darumaka (Galarian Form)", "Darmanitan", "Darmanitan (Galarian Form)", "Maractus", "Dwebble", "Crustle", "Scraggy", "Scrafty", "Sigilyph", "Yamask", "Yamask (Galarian Form)", "Cofagrigus", "Tirtouga", "Carracosta", "Archen", "Archeops", "Trubbish", "Garbodor", "Zorua", "Zorua (Hisuian Form)", "Zoroark", "Zoroark (Hisuian Form)", "Minccino", "Cinccino", "Gothita", "Gothorita", "Gothitelle", "Solosis", "Duosion", "Reuniclus", "Ducklett", "Swanna", "Vanillite", "Vanillish", "Vanilluxe", "Deerling", "Sawsbuck", "Emolga", "Karrablast", "Escavalier", "Foongus", "Amoonguss", "Frillish", "Jellicent", "Alomomola", "Joltik", "Galvantula", "Ferroseed", "Ferrothorn", "Klink", "Klang", "Klinklang", "Tynamo", "Eelektrik", "Eelektross", "Elgyem", "Beheeyem", "Litwick", "Lampent", "Chandelure", "Axew", "Fraxure", "Haxorus", "Cubchoo", "Beartic", "Cryogonal", "Shelmet", "Accelgor", "Stunfisk", "Stunfisk (Galarian Form)", "Mienfoo", "Mienshao", "Druddigon", "Golett", "Golurk", "Pawniard", "Bisharp", "Bouffalant", "Rufflet", "Braviary", "Braviary (Hisuian Form)", "Vullaby", "Mandibuzz", "Heatmor", "Durant", "Deino", "Zweilous", "Hydreigon", "Larvesta", "Volcarona", "Cobalion", "Terrakion", "Virizion", "Tornadus", "Thundurus", "Reshiram", "Zekrom", "Landorus", "Kyurem", "Keldeo", "Meloetta", "Genesect", "Chespin", "Quilladin", "Chesnaught", "Fennekin", "Braixen", "Delphox", "Froakie", "Frogadier", "Greninja", "Bunnelby", "Diggersby", "Fletchling", "Fletchinder", "Talonflame", "Scatterbug", "Spewpa", "Vivillon", "Litleo", "Pyroar", "Flabebe", "Floette", "Florges", "Skiddo", "Gogoat", "Pancham", "Pangoro", "Furfrou", "Espurr", "Meowstic", "Honedge", "Doublade", "Aegislash", "Spritzee", "Aromatisse", "Swirlix", "Slurpuff", "Inkay", "Malamar", "Binacle", "Barbaracle", "Skrelp", "Dragalge", "Clauncher", "Clawitzer", "Helioptile", "Heliolisk", "Tyrunt", "Tyrantrum", "Amaura", "Aurorus", "Sylveon", "Hawlucha", "Dedenne", "Carbink", "Goomy", "Sliggoo", "Sliggoo (Hisuian Form)", "Goodra", "Goodra (Hisuian Form)", "Klefki", "Phantump", "Trevenant", "Pumpkaboo", "Gourgeist", "Bergmite", "Avalugg", "Avalugg (Hisuian Form)", "Noibat", "Noivern", "Xerneas", "Yveltal", "Zygarde", "Diancie", "Diancie (Mega Form)", "Hoopa", "Volcanion", "Rowlet", "Dartrix", "Decidueye", "Decidueye (Hisuian Form)", "Litten", "Torracat", "Incineroar", "Popplio", "Brionne", "Primarina", "Pikipek", "Trumbeak", "Toucannon", "Yungoos", "Gumshoos", "Grubbin", "Charjabug", "Vikavolt", "Crabrawler", "Crabominable", "Oricorio", "Cutiefly", "Ribombee", "Rockruff", "Lycanroc", "Wishiwashi", "Mareanie", "Toxapex", "Mudbray", "Mudsdale", "Dewpider", "Araquanid", "Fomantis", "Lurantis", "Morelull", "Shiinotic", "Salandit", "Salazzle", "Stufful", "Bewear", "Bounsweet", "Steenee", "Tsareena", "Comfey", "Oranguru", "Passimian", "Wimpod", "Golisopod", "Sandygast", "Palossand", "Pyukumuku", "Type: Null", "Silvally", "Minior", "Komala", "Turtonator", "Togedemaru", "Mimikyu", "Bruxish", "Drampa", "Dhelmise", "Jangmo-o", "Hakamo-o", "Kommo-o", "Tapu Koko", "Tapu Lele", "Tapu Bulu", "Tapu Fini", "Cosmog", "Cosmoem", "Solgaleo", "Lunala", "Nihilego", "Buzzwole", "Pheromosa", "Xurkitree", "Celesteela", "Kartana", "Guzzlord", "Necrozma", "Magearna", "Marshadow", "Poipole", "Naganadel", "Stakataka", "Blacephalon", "Zeraora", "Meltan", "Melmetal", "Grookey", "Thwackey", "Rillaboom", "Scorbunny", "Raboot", "Cinderace", "Sobble", "Drizzile", "Inteleon", "Skwovet", "Greedent", "Rookidee", "Corvisquire", "Corviknight", "Blipbug", "Dottler", "Orbeetle", "Nickit", "Thievul", "Gossifleur", "Eldegoss", "Wooloo", "Dubwool", "Chewtle", "Drednaw", "Yamper", "Boltund", "Rolycoly", "Carkol", "Coalossal", "Applin", "Flapple", "Appletun", "Silicobra", "Sandaconda", "Cramorant", "Arrokuda", "Barraskewda", "Toxel", "Toxtricity", "Sizzlipede", "Centiskorch", "Clobbopus", "Grapploct", "Sinistea", "Polteageist", "Hatenna", "Hattrem", "Hatterene", "Impidimp", "Morgrem", "Grimmsnarl", "Obstagoon", "Perrserker", "Cursola", "Sirfetch'd", "Mr. Rime", "Runerigus", "Milcery", "Alcremie", "Falinks", "Pincurchin", "Snom", "Frosmoth", "Stonjourner", "Eiscue", "Indeedee", "Morpeko", "Cufant", "Copperajah", "Dracozolt", "Arctozolt", "Dracovish", "Arctovish", "Duraludon", "Dreepy", "Drakloak", "Dragapult", "Zacian", "Zamazenta", "Eternatus", "Kubfu", "Urshifu", "Zarude", "Regieleki", "Regidrago", "Glastrier", "Spectrier", "Calyrex", "Wyrdeer", "Kleavor", "Ursaluna", "Basculegion", "Sneasler", "Overqwil", "Enamorus", "Sprigatito", "Floragato", "Meowscarada", "Fuecoco", "Crocalor", "Skeledirge", "Quaxly", "Quaxwell", "Quaquaval", "Lechonk", "Oinkologne", "Tarountula", "Spidops", "Nymble", "Lokix", "Pawmi", "Pawmo", "Pawmot", "Tandemaus", "Maushold", "Fidough", "Dachsbun", "Smoliv", "Dolliv", "Arboliva", "Squawkabilly", "Nacli", "Naclstack", "Garganacl", "Charcadet", "Armarouge", "Ceruledge", "Tadbulb", "Bellibolt", "Wattrel", "Kilowattrel", "Maschiff", "Mabosstiff", "Shroodle", "Grafaiai", "Bramblin", "Brambleghast", "Toedscool", "Toedscruel", "Klawf", "Capsakid", "Scovillain", "Rellor", "Rabsca", "Flittle", "Espathra", "Tinkatink", "Tinkatuff", "Tinkaton", "Wiglett", "Wugtrio", "Bombirdier", "Finizen", "Palafin", "Varoom", "Revavroom", "Cyclizar", "Orthworm", "Glimmet", "Glimmora", "Greavard", "Houndstone", "Flamigo", "Cetoddle", "Cetitan", "Veluza", "Dondozo", "Tatsugiri", "Annihilape", "Clodsire", "Farigiraf", "Dudunsparce", "Kingambit", "Great Tusk", "Scream Tail", "Brute Bonnet", "Flutter Mane", "Slither Wing", "Sandy Shocks", "Iron Treads", "Iron Bundle", "Iron Hands", "Iron Jugulis", "Iron Moth", "Iron Thorns", "Frigibax", "Arctibax", "Baxcalibur", "Gimmighoul", "Gholdengo", "Wo-Chien", "Chien-Pao", "Ting-Lu", "Chi-Yu", "Roaring Moon", "Iron Valiant", "Koraidon", "Miraidon"
+];
+
+const statiPossibili = [
+  { id: 'BRN', col: '#e67e22', label: '🔥 SCOTTATURA' }, { id: 'PAR', col: '#f1c40f', label: '⚡ PARALISI' },
+  { id: 'PSN', col: '#9b59b6', label: '☠️ AVVELENATO' }, { id: 'SLP', col: '#3498db', label: '💤 SONNO' },
+  { id: 'FRZ', col: '#81ecec', label: '❄️ CONGELATO' }, { id: 'CNF', col: '#e84393', label: '😵 CONFUSIONE' },
+  { id: 'FLN', col: '#636e72', label: '💫 TENTENNAMENTO' }, { id: 'BLN', col: '#2d3436', label: '🕶️ ACCECATO' }
+];
+
 function App() {
   const [user, setUser] = useState(null);
   const [email, setEmail] = useState("");
@@ -217,53 +265,6 @@ function App() {
   const [zaino, setZaino] = useState([]);
   const [itemSelezionato, setItemSelezionato] = useState("");
 
-  const listaStrumentiBase = [
-    "Beast Ball", "Cherish Ball", "Dive Ball", "Dream Ball", "Dusk Ball", "Fast Ball", "Friend Ball", "Greatball", 
-    "Heal Ball", "Heavy Ball", "Level Ball", "Love Ball", "Lure Ball", "Luxury Ball", "Masterball", "Moon Ball", 
-    "Nest Ball", "Net Ball", "Park Ball", "Pokeball", "Premier Ball", "Quick Ball", "Repeat Ball", "Safari Ball", 
-    "Sport Ball", "Timer Ball", "Ultraball", "Abomasite", "Absolite", "Aerodactylite", "Aggronite", "Alakazite", 
-    "Altarianite", "Ampharosite", "Audinite", "Banettite", "Beedrillite", "Blastoisinite", "Blazikenite", "Cameruptite", 
-    "Charizardite X", "Charizardite Y", "Diancite", "Galladite", "Garchompite", "Gardevoirite", "Gengarite", "Glalitite", 
-    "Gyaradosite", "Heracronite", "Houndoominite", "Kangaskhanite", "Latiasite", "Latiosite", "Lopunnite", "Lucarionite", 
-    "Manectite", "Mawilite", "Medichamite", "Metagrossite", "Mewtwonite X", "Mewtwonite Y", "Pidgeotite", "Pinsirite", 
-    "Sablenite", "Salamencite", "Sceptilite", "Scizorite", "Sharpedonite", "Slowbronite", "Steelixite", "Swampertite", 
-    "Tyranitarite", "Venusaurite", "Antidote", "Aspear Berry", "Awakening", "Berry Juice", "Burn Heal", "Cheri Berry", 
-    "Chesto Berry", "Elixir", "Energy Powder", "Energy Root", "Enigma Berry", "Ether", "Fresh Water", "Full Heal", 
-    "Full Restore", "Heal Powder", "Hyper Potion", "Ice Heal", "Lemonade", "Leppa Berry", "Lum Berry", "Max Elixir", 
-    "Max Ether", "Max Potion", "Max Revive", "Moomoo Milk", "Oran Berry", "Paralyze Heal", "Pecha Berry", "Persim Berry", 
-    "Potion", "Rawst Berry", "Revival Herb", "Revive", "Sitrus Berry", "Soda Pop", "Super Potion", "Ability Capsule", 
-    "Ability Patch", "Absorb Bulb", "Adamant Orb", "Air Balloon", "Amulet Coin", "Armor Fossil", "Assault Vest", 
-    "Big Root", "Binding Band", "Black Belt", "Black Glasses", "Black Sludge", "Bright Powder", "Cell Battery", 
-    "Charcoal", "Choice Band", "Choice Scarf", "Choice Specs", "Claw Fossil", "Cover Fossil", "Damp Rock", "Dawn Stone", 
-    "Destiny Knot", "Dome Fossil", "Draco Plate", "Dragon Fang", "Dread Plate", "Dusk Stone", "Earth Plate", "Eject Button", 
-    "Eject Pack", "Electric Seed", "Escape Rope", "Eviolite", "Expert Belt", "Fire Stone", "Fist Plate", "Flame Orb", 
-    "Flame Plate", "Float Stone", "Focus Band", "Focus Sash", "Grassy Seed", "Grip Claw", "Hard Stone", "Heat Rock", 
-    "Heavy-Duty Boots", "Helix Fossil", "Ice Stone", "Icicle Plate", "Icy Rock", "Insect Plate", "Iron Ball", "Iron Plate", 
-    "Jaw Fossil", "Kings Rock", "Leaf Stone", "Leftovers", "Life Orb", "Light Ball", "Light Clay", "Luminous Moss", 
-    "Macho Brace", "Magnet", "Meadow Plate", "Mental Herb", "Metal Coat", "Metronome", "Mind Plate", "Miracle Seed", 
-    "Misty Seed", "Moon Stone", "Muscle Band", "Mystic Water", "Never-Melt Ice", "Old Amber", "Oval Stone", "Pixie Plate", 
-    "Plume Fossil", "Poison Barb", "Power Anklet", "Power Band", "Power Belt", "Power Bracer", "Power Herb", "Power Lens", 
-    "Power Weight", "Protective Pads", "Psychic Seed", "Quick Claw", "Rare Candy", "Razor Claw", "Razor Fang", "Red Card", 
-    "Ring Target", "Rocky Helmet", "Room Service", "Root Fossil", "Rose Incense", "Safety Goggles", "Scope Lens", 
-    "Sea Incense", "Sharp Beak", "Shed Shell", "Shell Bell", "Shiny Stone", "Shock Drive", "Silk Scarf", "Silver Powder", 
-    "Skull Fossil", "Sky Plate", "Smooth Rock", "Snowball", "Soft Sand", "Spell Tag", "Splash Plate", "Spooky Plate", 
-    "Sticky Barb", "Stone Plate", "Sun Stone", "Terrain Extender", "Thick Club", "Thunder Stone", "Toxic Orb", "Toxic Plate", 
-    "Twisted Spoon", "Utility Umbrella", "Water Stone", "Wave Incense", "Weakness Policy", "White Herb", "Wide Lens", 
-    "Wise Glasses", "Zap Plate"
-  ];
-  const listaStrumenti = listaStrumentiBase.map(item => tradStrumentiEngToIta[item] || item).sort();
-
-  const listaPokemon = [
-    "Bulbasaur", "Ivysaur", "Venusaur", "Venusaur (Mega Form)", "Charmander", "Charmeleon", "Charizard", "Charizard (Mega X Form)", "Charizard (Mega Y Form)", "Squirtle", "Wartortle", "Blastoise", "Blastoise (Mega Form)", "Caterpie", "Metapod", "Butterfree", "Weedle", "Kakuna", "Beedrill", "Beedrill (Mega Form)", "Pidgey", "Pidgeotto", "Pidgeot", "Pidgeot (Mega Form)", "Rattata", "Rattata (Alolan Form)", "Raticate", "Raticate (Alolan Form)", "Spearow", "Fearow", "Ekans", "Arbok", "Pikachu", "Raichu", "Raichu (Alolan Form)", "Sandshrew", "Sandshrew (Alolan Form)", "Sandslash", "Sandslash (Alolan Form)", "Nidoran F", "Nidorina", "Nidoqueen", "Nidoran M", "Nidorino", "Nidoking", "Clefairy", "Clefable", "Vulpix", "Vulpix (Alolan Form)", "Ninetales", "Ninetales (Alolan Form)", "Jigglypuff", "Wigglytuff", "Zubat", "Golbat", "Oddish", "Gloom", "Vileplume", "Paras", "Parasect", "Venonat", "Venomoth", "Diglett", "Diglett (Alolan Form)", "Dugtrio", "Dugtrio (Alolan Form)", "Meowth", "Meowth (Alolan Form)", "Meowth (Galarian Form)", "Persian", "Persian (Alolan Form)", "Psyduck", "Golduck", "Mankey", "Primeape", "Growlithe", "Growlithe (Hisuian Form)", "Arcanine", "Arcanine (Hisuian Form)", "Poliwag", "Poliwhirl", "Poliwrath", "Abra", "Kadabra", "Alakazam", "Alakazam (Mega Form)", "Machop", "Machoke", "Machamp", "Bellsprout", "Weepinbell", "Victreebel", "Tentacool", "Tentacruel", "Geodude", "Geodude (Alolan Form)", "Graveler", "Graveler (Alolan Form)", "Golem", "Golem (Alolan Form)", "Ponyta", "Ponyta (Galarian Form)", "Rapidash", "Rapidash (Galarian Form)", "Slowpoke", "Slowpoke (Galarian Form)", "Slowbro", "Slowbro (Mega Form)", "Slowbro (Galarian Form)", "Magnemite", "Magneton", "Farfetch'd", "Farfetch'd (Galarian Form)", "Doduo", "Dodrio", "Seel", "Dewgong", "Grimer", "Grimer (Alolan Form)", "Muk", "Muk (Alolan Form)", "Shellder", "Cloyster", "Gastly", "Haunter", "Gengar", "Gengar (Mega Form)", "Onix", "Drowzee", "Hypno", "Krabby", "Kingler", "Voltorb", "Voltorb (Hisuian Form)", "Electrode", "Electrode (Hisuian Form)", "Exeggcute", "Exeggutor", "Exeggutor (Alolan Form)", "Cubone", "Marowak", "Marowak (Alolan Form)", "Hitmonlee", "Hitmonchan", "Lickitung", "Koffing", "Weezing", "Weezing (Galarian Form)", "Rhyhorn", "Rhydon", "Chansey", "Tangela", "Kangaskhan", "Kangaskhan (Mega Form)", "Horsea", "Seadra", "Goldeen", "Seaking", "Staryu", "Starmie", "Mr. Mime", "Mr. Mime (Galarian Form)", "Scyther", "Jynx", "Electabuzz", "Magmar", "Pinsir", "Pinsir (Mega Form)", "Tauros", "Tauros (Paldean Form)", "Magikarp", "Gyarados", "Gyarados (Mega Form)", "Lapras", "Ditto", "Eevee", "Vaporeon", "Jolteon", "Flareon", "Porygon", "Omanyte", "Omastar", "Kabuto", "Kabutops", "Aerodactyl", "Aerodactyl (Mega Form)", "Snorlax", "Articuno", "Articuno (Galarian Form)", "Zapdos", "Zapdos (Galarian Form)", "Moltres", "Moltres (Galarian Form)", "Dratini", "Dragonair", "Dragonite", "Mewtwo", "Mewtwo (Mega X Form)", "Mewtwo (Mega Y Form)", "Mew", "Chikorita", "Bayleef", "Meganium", "Cyndaquil", "Quilava", "Typhlosion", "Typhlosion (Hisuian Form)", "Totodile", "Croconaw", "Feraligatr", "Sentret", "Furret", "Hoothoot", "Noctowl", "Ledyba", "Ledian", "Spinarak", "Ariados", "Crobat", "Chinchou", "Lanturn", "Pichu", "Cleffa", "Igglybuff", "Togepi", "Togetic", "Natu", "Xatu", "Mareep", "Flaaffy", "Ampharos", "Ampharos (Mega Form)", "Bellossom", "Marill", "Azumarill", "Sudowoodo", "Politoed", "Hoppip", "Skiploom", "Jumpluff", "Aipom", "Sunkern", "Sunflora", "Yanma", "Wooper", "Wooper (Paldean Form)", "Quagsire", "Espeon", "Umbreon", "Murkrow", "Slowking", "Slowking (Galarian Form)", "Misdreavus", "Unown", "Wobbuffet", "Girafarig", "Pineco", "Forretress", "Dunsparce", "Gligar", "Steelix", "Steelix (Mega Form)", "Snubbull", "Granbull", "Qwilfish", "Qwilfish (Hisuian Form)", "Scizor", "Scizor (Mega Form)", "Shuckle", "Heracross", "Heracross (Mega Form)", "Sneasel", "Sneasel (Hisuian Form)", "Teddiursa", "Ursaring", "Slugma", "Magcargo", "Swinub", "Piloswine", "Corsola", "Corsola (Galarian Form)", "Remoraid", "Octillery", "Delibird", "Mantine", "Skarmory", "Houndour", "Houndoom", "Houndoom (Mega Form)", "Kingdra", "Phanpy", "Donphan", "Porygon2", "Stantler", "Smeargle", "Tyrogue", "Hitmontop", "Smoochum", "Elekid", "Magby", "Miltank", "Blissey", "Raikou", "Entei", "Suicune", "Larvitar", "Pupitar", "Tyranitar", "Tyranitar (Mega Form)", "Lugia", "Ho-Oh", "Celebi", "Treecko", "Grovyle", "Sceptile", "Sceptile (Mega Form)", "Torchic", "Combusken", "Blaziken", "Blaziken (Mega Form)", "Mudkip", "Marshtomp", "Swampert", "Swampert (Mega Form)", "Poochyena", "Mightyena", "Zigzagoon", "Zigzagoon (Galarian Form)", "Linoone", "Linoone (Galarian Form)", "Wurmple", "Silcoon", "Beautifly", "Cascoon", "Dustox", "Lotad", "Lombre", "Ludicolo", "Seedot", "Nuzleaf", "Shiftry", "Taillow", "Swellow", "Wingull", "Pelipper", "Ralts", "Kirlia", "Gardevoir", "Gardevoir (Mega Form)", "Surskit", "Masquerain", "Shroomish", "Breloom", "Slakoth", "Vigoroth", "Slaking", "Nincada", "Ninjask", "Shedinja", "Whismur", "Loudred", "Exploud", "Makuhita", "Hariyama", "Azurill", "Nosepass", "Skitty", "Delcatty", "Sableye", "Sableye (Mega Form)", "Mawile", "Mawile (Mega Form)", "Aron", "Lairon", "Aggron", "Aggron (Mega Form)", "Meditite", "Medicham", "Medicham (Mega Form)", "Electrike", "Manectric", "Manectric (Mega Form)", "Plusle", "Minun", "Volbeat", "Illumise", "Roselia", "Gulpin", "Swalot", "Carvanha", "Sharpedo", "Sharpedo (Mega Form)", "Wailmer", "Wailord", "Numel", "Camerupt", "Camerupt (Mega Form)", "Torkoal", "Spoink", "Grumpig", "Spinda", "Trapinch", "Vibrava", "Flygon", "Cacnea", "Cacturne", "Swablu", "Altaria", "Altaria (Mega Form)", "Zangoose", "Seviper", "Lunatone", "Solrock", "Barboach", "Whiscash", "Corphish", "Crawdaunt", "Baltoy", "Claydol", "Lileep", "Cradily", "Anorith", "Armaldo", "Feebas", "Milotic", "Castform", "Kecleon", "Shuppet", "Banette", "Banette (Mega Form)", "Duskull", "Dusclops", "Tropius", "Chimecho", "Absol", "Absol (Mega Form)", "Wynaut", "Snorunt", "Glalie", "Glalie (Mega Form)", "Spheal", "Sealeo", "Walrein", "Clamperl", "Huntail", "Gorebyss", "Relicanth", "Luvdisc", "Bagon", "Shelgon", "Salamence", "Salamence (Mega Form)", "Beldum", "Metang", "Metagross", "Metagross (Mega Form)", "Regirock", "Regice", "Registeel", "Latias", "Latias (Mega Form)", "Latios", "Latios (Mega Form)", "Kyogre", "Groudon", "Rayquaza", "Rayquaza (Mega Form)", "Jirachi", "Deoxys", "Turtwig", "Grotle", "Torterra", "Chimchar", "Monferno", "Infernape", "Piplup", "Prinplup", "Empoleon", "Starly", "Staravia", "Staraptor", "Bidoof", "Bibarel", "Kricketot", "Kricketune", "Shinx", "Luxio", "Luxray", "Budew", "Roserade", "Cranidos", "Rampardos", "Shieldon", "Bastiodon", "Burmy", "Wormadam", "Mothim", "Combee", "Vespiquen", "Pachirisu", "Buizel", "Floatzel", "Cherubi", "Cherrim", "Shellos", "Gastrodon", "Ambipom", "Drifloon", "Drifblim", "Buneary", "Lopunny", "Lopunny (Mega Form)", "Mismagius", "Honchkrow", "Glameow", "Purugly", "Chingling", "Stunky", "Skuntank", "Bronzor", "Bronzong", "Bonsly", "Mime Jr.", "Happiny", "Chatot", "Spiritomb", "Gible", "Gabite", "Garchomp", "Garchomp (Mega Form)", "Munchlax", "Riolu", "Lucario", "Lucario (Mega Form)", "Hippopotas", "Hippowdon", "Skorupi", "Drapion", "Croagunk", "Toxicroak", "Carnivine", "Finneon", "Lumineon", "Mantyke", "Snover", "Abomasnow", "Abomasnow (Mega Form)", "Weavile", "Magnezone", "Lickilicky", "Rhyperior", "Tangrowth", "Electivire", "Magmortar", "Togekiss", "Yanmega", "Leafeon", "Glaceon", "Gliscor", "Mamoswine", "Porygon-Z", "Gallade", "Gallade (Mega Form)", "Probopass", "Dusknoir", "Froslass", "Rotom", "Uxie", "Mesprit", "Azelf", "Dialga", "Palkia", "Heatran", "Regigigas", "Giratina", "Cresselia", "Phione", "Manaphy", "Darkrai", "Shaymin", "Arceus", "Victini", "Snivy", "Servine", "Serperior", "Tepig", "Pignite", "Emboar", "Oshawott", "Dewott", "Samurott", "Samurott (Hisuian Form)", "Patrat", "Watchog", "Lillipup", "Herdier", "Stoutland", "Purrloin", "Liepard", "Pansage", "Simisage", "Pansear", "Simisear", "Panpour", "Simipour", "Munna", "Musharna", "Pidove", "Tranquill", "Unfezant", "Blitzle", "Zebstrika", "Roggenrola", "Boldore", "Gigalith", "Woobat", "Swoobat", "Drilbur", "Excadrill", "Audino", "Audino (Mega Form)", "Timburr", "Gurdurr", "Conkeldurr", "Tympole", "Palpitoad", "Seismitoad", "Throh", "Sawk", "Sewaddle", "Swadloon", "Leavanny", "Venipede", "Whirlipede", "Scolipede", "Cottonee", "Whimsicott", "Petilil", "Lilligant", "Lilligant (Hisuian Form)", "Basculin", "Sandile", "Krokorok", "Krookodile", "Darumaka", "Darumaka (Galarian Form)", "Darmanitan", "Darmanitan (Galarian Form)", "Maractus", "Dwebble", "Crustle", "Scraggy", "Scrafty", "Sigilyph", "Yamask", "Yamask (Galarian Form)", "Cofagrigus", "Tirtouga", "Carracosta", "Archen", "Archeops", "Trubbish", "Garbodor", "Zorua", "Zorua (Hisuian Form)", "Zoroark", "Zoroark (Hisuian Form)", "Minccino", "Cinccino", "Gothita", "Gothorita", "Gothitelle", "Solosis", "Duosion", "Reuniclus", "Ducklett", "Swanna", "Vanillite", "Vanillish", "Vanilluxe", "Deerling", "Sawsbuck", "Emolga", "Karrablast", "Escavalier", "Foongus", "Amoonguss", "Frillish", "Jellicent", "Alomomola", "Joltik", "Galvantula", "Ferroseed", "Ferrothorn", "Klink", "Klang", "Klinklang", "Tynamo", "Eelektrik", "Eelektross", "Elgyem", "Beheeyem", "Litwick", "Lampent", "Chandelure", "Axew", "Fraxure", "Haxorus", "Cubchoo", "Beartic", "Cryogonal", "Shelmet", "Accelgor", "Stunfisk", "Stunfisk (Galarian Form)", "Mienfoo", "Mienshao", "Druddigon", "Golett", "Golurk", "Pawniard", "Bisharp", "Bouffalant", "Rufflet", "Braviary", "Braviary (Hisuian Form)", "Vullaby", "Mandibuzz", "Heatmor", "Durant", "Deino", "Zweilous", "Hydreigon", "Larvesta", "Volcarona", "Cobalion", "Terrakion", "Virizion", "Tornadus", "Thundurus", "Reshiram", "Zekrom", "Landorus", "Kyurem", "Keldeo", "Meloetta", "Genesect", "Chespin", "Quilladin", "Chesnaught", "Fennekin", "Braixen", "Delphox", "Froakie", "Frogadier", "Greninja", "Bunnelby", "Diggersby", "Fletchling", "Fletchinder", "Talonflame", "Scatterbug", "Spewpa", "Vivillon", "Litleo", "Pyroar", "Flabebe", "Floette", "Florges", "Skiddo", "Gogoat", "Pancham", "Pangoro", "Furfrou", "Espurr", "Meowstic", "Honedge", "Doublade", "Aegislash", "Spritzee", "Aromatisse", "Swirlix", "Slurpuff", "Inkay", "Malamar", "Binacle", "Barbaracle", "Skrelp", "Dragalge", "Clauncher", "Clawitzer", "Helioptile", "Heliolisk", "Tyrunt", "Tyrantrum", "Amaura", "Aurorus", "Sylveon", "Hawlucha", "Dedenne", "Carbink", "Goomy", "Sliggoo", "Sliggoo (Hisuian Form)", "Goodra", "Goodra (Hisuian Form)", "Klefki", "Phantump", "Trevenant", "Pumpkaboo", "Gourgeist", "Bergmite", "Avalugg", "Avalugg (Hisuian Form)", "Noibat", "Noivern", "Xerneas", "Yveltal", "Zygarde", "Diancie", "Diancie (Mega Form)", "Hoopa", "Volcanion", "Rowlet", "Dartrix", "Decidueye", "Decidueye (Hisuian Form)", "Litten", "Torracat", "Incineroar", "Popplio", "Brionne", "Primarina", "Pikipek", "Trumbeak", "Toucannon", "Yungoos", "Gumshoos", "Grubbin", "Charjabug", "Vikavolt", "Crabrawler", "Crabominable", "Oricorio", "Cutiefly", "Ribombee", "Rockruff", "Lycanroc", "Wishiwashi", "Mareanie", "Toxapex", "Mudbray", "Mudsdale", "Dewpider", "Araquanid", "Fomantis", "Lurantis", "Morelull", "Shiinotic", "Salandit", "Salazzle", "Stufful", "Bewear", "Bounsweet", "Steenee", "Tsareena", "Comfey", "Oranguru", "Passimian", "Wimpod", "Golisopod", "Sandygast", "Palossand", "Pyukumuku", "Type: Null", "Silvally", "Minior", "Komala", "Turtonator", "Togedemaru", "Mimikyu", "Bruxish", "Drampa", "Dhelmise", "Jangmo-o", "Hakamo-o", "Kommo-o", "Tapu Koko", "Tapu Lele", "Tapu Bulu", "Tapu Fini", "Cosmog", "Cosmoem", "Solgaleo", "Lunala", "Nihilego", "Buzzwole", "Pheromosa", "Xurkitree", "Celesteela", "Kartana", "Guzzlord", "Necrozma", "Magearna", "Marshadow", "Poipole", "Naganadel", "Stakataka", "Blacephalon", "Zeraora", "Meltan", "Melmetal", "Grookey", "Thwackey", "Rillaboom", "Scorbunny", "Raboot", "Cinderace", "Sobble", "Drizzile", "Inteleon", "Skwovet", "Greedent", "Rookidee", "Corvisquire", "Corviknight", "Blipbug", "Dottler", "Orbeetle", "Nickit", "Thievul", "Gossifleur", "Eldegoss", "Wooloo", "Dubwool", "Chewtle", "Drednaw", "Yamper", "Boltund", "Rolycoly", "Carkol", "Coalossal", "Applin", "Flapple", "Appletun", "Silicobra", "Sandaconda", "Cramorant", "Arrokuda", "Barraskewda", "Toxel", "Toxtricity", "Sizzlipede", "Centiskorch", "Clobbopus", "Grapploct", "Sinistea", "Polteageist", "Hatenna", "Hattrem", "Hatterene", "Impidimp", "Morgrem", "Grimmsnarl", "Obstagoon", "Perrserker", "Cursola", "Sirfetch'd", "Mr. Rime", "Runerigus", "Milcery", "Alcremie", "Falinks", "Pincurchin", "Snom", "Frosmoth", "Stonjourner", "Eiscue", "Indeedee", "Morpeko", "Cufant", "Copperajah", "Dracozolt", "Arctozolt", "Dracovish", "Arctovish", "Duraludon", "Dreepy", "Drakloak", "Dragapult", "Zacian", "Zamazenta", "Eternatus", "Kubfu", "Urshifu", "Zarude", "Regieleki", "Regidrago", "Glastrier", "Spectrier", "Calyrex", "Wyrdeer", "Kleavor", "Ursaluna", "Basculegion", "Sneasler", "Overqwil", "Enamorus", "Sprigatito", "Floragato", "Meowscarada", "Fuecoco", "Crocalor", "Skeledirge", "Quaxly", "Quaxwell", "Quaquaval", "Lechonk", "Oinkologne", "Tarountula", "Spidops", "Nymble", "Lokix", "Pawmi", "Pawmo", "Pawmot", "Tandemaus", "Maushold", "Fidough", "Dachsbun", "Smoliv", "Dolliv", "Arboliva", "Squawkabilly", "Nacli", "Naclstack", "Garganacl", "Charcadet", "Armarouge", "Ceruledge", "Tadbulb", "Bellibolt", "Wattrel", "Kilowattrel", "Maschiff", "Mabosstiff", "Shroodle", "Grafaiai", "Bramblin", "Brambleghast", "Toedscool", "Toedscruel", "Klawf", "Capsakid", "Scovillain", "Rellor", "Rabsca", "Flittle", "Espathra", "Tinkatink", "Tinkatuff", "Tinkaton", "Wiglett", "Wugtrio", "Bombirdier", "Finizen", "Palafin", "Varoom", "Revavroom", "Cyclizar", "Orthworm", "Glimmet", "Glimmora", "Greavard", "Houndstone", "Flamigo", "Cetoddle", "Cetitan", "Veluza", "Dondozo", "Tatsugiri", "Annihilape", "Clodsire", "Farigiraf", "Dudunsparce", "Kingambit", "Great Tusk", "Scream Tail", "Brute Bonnet", "Flutter Mane", "Slither Wing", "Sandy Shocks", "Iron Treads", "Iron Bundle", "Iron Hands", "Iron Jugulis", "Iron Moth", "Iron Thorns", "Frigibax", "Arctibax", "Baxcalibur", "Gimmighoul", "Gholdengo", "Wo-Chien", "Chien-Pao", "Ting-Lu", "Chi-Yu", "Roaring Moon", "Iron Valiant", "Koraidon", "Miraidon"
-  ];
-
-  const statiPossibili = [
-    { id: 'BRN', col: '#e67e22', label: '🔥 SCOTTATURA' }, { id: 'PAR', col: '#f1c40f', label: '⚡ PARALISI' },
-    { id: 'PSN', col: '#9b59b6', label: '☠️ AVVELENATO' }, { id: 'SLP', col: '#3498db', label: '💤 SONNO' },
-    { id: 'FRZ', col: '#81ecec', label: '❄️ CONGELATO' }, { id: 'CNF', col: '#e84393', label: '😵 CONFUSIONE' },
-    { id: 'FLN', col: '#636e72', label: '💫 TENTENNAMENTO' }, { id: 'BLN', col: '#2d3436', label: '🕶️ ACCECATO' }
-  ];
-
   const [trainer, setTrainer] = useState({
     nome: "", player: "", age: 15, concept: "", nature: "",
     money: 3000, confidence: 1, currentHP: 2, currentWill: 4,
@@ -276,7 +277,8 @@ function App() {
     }
   });
 
-  // --- LOGICA DI ACCESSO E CARICAMENTO ---
+  const listaStrumenti = listaStrumentiBase.map(item => tradStrumentiEngToIta[item] || item).sort();
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
@@ -313,17 +315,15 @@ function App() {
       await setDoc(doc(db, "utenti", user.uid), {
         trainer, squadra, zaino
       });
-      alert("✅ Salvataggio sul Cloud completato!");
+      alert("✅ Salvataggio sul Cloud completato con successo!");
     } catch (err) {
-      alert("❌ Errore durante il salvataggio.");
+      alert("❌ Errore durante il salvataggio: " + err.message);
     }
   };
 
   const fetchData = async (folder, name) => {
     try {
-      const nomePulito = encodeURIComponent(name);
-      const url = `${BASE_URL}/data/${folder}/${nomePulito}.json`;
-      const res = await fetch(url);
+      const res = await fetch(`${BASE_URL}/data/${folder}/${encodeURIComponent(name)}.json`);
       if (!res.ok) return null;
       return await res.json();
     } catch (e) { return null; }
@@ -340,30 +340,35 @@ function App() {
     alert(`🎲 Lancio: ${nomeTradotto.toUpperCase()}\nDadi tirati: ${numero}\nRisultati: [${tiri.join(", ")}]\n✨ SUCCESSI: ${successi}`);
   };
 
-  const trovaFormeAlternative = async (nomeBase) => {
-    const formeTrovate = [nomeBase];
-    const suffissi = [' (Mega Form)', ' (Mega X Form)', ' (Mega Y Form)', ' (Gigantamax Form)', ' (Alolan Form)', ' (Galarian Form)'];
-    for (let suf of suffissi) {
-      try {
-        const res = await fetch(`${BASE_URL}/data/Pokedex/${encodeURIComponent(nomeBase + suf)}.json`);
-        if (res.ok) formeTrovate.push(`${nomeBase + suf}`);
-      } catch (e) { }
-    }
-    return formeTrovate;
-  };
-
   const cercaPokemon = async () => {
-    const nome = ricerca.trim().charAt(0).toUpperCase() + ricerca.trim().slice(1).toLowerCase();
-    const pkm = await fetchData('Pokedex', nome);
+    const query = ricerca.trim().toLowerCase();
+    if (!query) return;
+
+    // Cerca nella lista se esiste il nome esatto o se inizia con quel nome (per Toxtricity ecc)
+    const nomeReale = listaPokemon.find(p => 
+      p.toLowerCase() === query || 
+      p.toLowerCase().startsWith(query + " (")
+    );
+
+    if (!nomeReale) {
+      alert("Pokémon non trovato. Controlla il nome!");
+      return;
+    }
+
+    const pkm = await fetchData('Pokedex', nomeReale);
     if (pkm) {
       pkm.Moves.forEach(async (m) => {
         const moveData = await fetchData('Moves', m.Name);
         if (moveData) setDettagliMosse(prev => ({ ...prev, [m.Name]: moveData }));
       });
-      const forme = await trovaFormeAlternative(pkm.Name);
+
+      // Trova tutte le forme basate sul nome base
+      const nomeBase = nomeReale.split(' (')[0];
+      const forme = listaPokemon.filter(p => p === nomeBase || p.startsWith(nomeBase + " ("));
+      
       pkm.availableForms = forme;
       setPkmTrovato(pkm);
-    } else { alert("Pokémon non trovato."); }
+    }
   };
 
   const aggiungiZaino = async (nomeItemScritto) => {
@@ -374,7 +379,7 @@ function App() {
     if (item) {
       setZaino([...zaino, { ...item, qty: 1 }]);
     } else { 
-      const conferma = window.confirm(`"${nomeFormattato}" non trovato. Aggiungere come oggetto custom?`);
+      const conferma = window.confirm(`L'oggetto "${nomeFormattato}" non è stato trovato.\nVuoi aggiungerlo comunque come Oggetto Custom?`);
       if (conferma) {
         setZaino([...zaino, { Name: nomeIngleseDB, customName: nomeFormattato, Description: "Oggetto personalizzato", qty: 1 }]);
       }
@@ -416,6 +421,7 @@ function App() {
   const renderImmagine = (tipo, nome, stile) => {
     const cartella = tipo === 'pokemon' ? 'BookSprites' : 'Items';
     const nomePulito = encodeURIComponent(nome);
+
     return (
       <img 
         key={nome}
@@ -423,16 +429,10 @@ function App() {
         alt={tNomePkm(nome)} 
         style={stile} 
         onError={(e) => { 
-          if (!e.target.dataset.triedLower) {
-            e.target.dataset.triedLower = "true";
-            e.target.src = `${BASE_URL}/data/images/${cartella}/${nome.toLowerCase()}.png`;
-          } else if (!e.target.dataset.triedNoSpace) {
-            e.target.dataset.triedNoSpace = "true";
-            e.target.src = `${BASE_URL}/data/images/${cartella}/${nome.replace(/ /g, '')}.png`;
-          } else if (!e.target.dataset.triedBase && tipo === 'pokemon') {
+          if (!e.target.dataset.triedBase && tipo === 'pokemon') {
             e.target.dataset.triedBase = "true";
             const pkmBase = nome.split(' (')[0];
-            e.target.src = `${BASE_URL}/data/images/${cartella}/${pkmBase}.png`;
+            e.target.src = `${BASE_URL}/data/images/${cartella}/${encodeURIComponent(pkmBase)}.png`;
           } else {
             e.target.style.display = 'none'; 
           }
@@ -510,19 +510,12 @@ function App() {
         {tab === "trainer" && (
           <div style={styles.physicalSheet}>
             <div style={styles.sheetHeader}>
-              <h1 style={{margin: 0, fontSize: '28px', letterSpacing: '2px'}}>SCHEDA DELL'ALLENATORE</h1>
+              <h1 style={{margin: 0, fontSize: '28px', letterSpacing: '2px'}}>SCHEDA ALLENATORE</h1>
             </div>
-
             <div style={styles.sheetGridRow}>
               <div style={styles.sheetInputBox}><label style={styles.sheetLabel}>NOME</label><input style={styles.sheetInput} value={trainer.nome} onChange={e => setTrainer({...trainer, nome: e.target.value})} /></div>
-              <div style={styles.sheetInputBox}><label style={styles.sheetLabel}>GIOCATORE</label><input style={styles.sheetInput} value={trainer.player} onChange={e => setTrainer({...trainer, player: e.target.value})} /></div>
-              <div style={{...styles.sheetInputBox, flex: 0.5}}><label style={styles.sheetLabel}>ETÀ</label><input type="number" style={styles.sheetInput} value={trainer.age} onChange={e => setTrainer({...trainer, age: e.target.value})} /></div>
+              <div style={styles.sheetInputBox}><label style={styles.sheetLabel}>SOLDI</label><input type="number" style={styles.sheetInput} value={trainer.money} onChange={e => setTrainer({...trainer, money: e.target.value})} /></div>
             </div>
-            <div style={styles.sheetGridRow}>
-              <div style={styles.sheetInputBox}><label style={styles.sheetLabel}>NATURA</label><input style={styles.sheetInput} value={trainer.nature} onChange={e => setTrainer({...trainer, nature: e.target.value})} /></div>
-              <div style={styles.sheetInputBox}><label style={styles.sheetLabel}>CONCETTO</label><input style={styles.sheetInput} value={trainer.concept} onChange={e => setTrainer({...trainer, concept: e.target.value})} /></div>
-            </div>
-
             <div style={{...styles.sheetGridRow, marginTop: '15px'}}>
               <div style={{...styles.sheetInputBox, backgroundColor: '#2d1b1b', borderColor: '#ff4757'}}>
                 <label style={{...styles.sheetLabel, color: '#ff4757'}}>PS</label>
@@ -532,14 +525,9 @@ function App() {
                 <label style={{...styles.sheetLabel, color: '#4bcffa'}}>VOLONTÀ</label>
                 <input type="number" style={{...styles.sheetInput, color: '#4bcffa', textAlign: 'center', fontSize: '24px'}} value={trainer.currentWill} onChange={e => setTrainer({...trainer, currentWill: e.target.value})} />
               </div>
-              <div style={styles.sheetInputBox}>
-                <label style={styles.sheetLabel}>₽</label>
-                <input type="number" style={{...styles.sheetInput, textAlign: 'center', fontSize: '20px'}} value={trainer.money} onChange={e => setTrainer({...trainer, money: e.target.value})} />
-              </div>
             </div>
-
             <div style={{display: 'flex', gap: '20px', marginTop: '20px', flexWrap: 'wrap'}}>
-              <div style={{flex: '0.8', display: 'flex', flexDirection: 'column', gap: '10px', minWidth: '150px'}}>
+              <div style={{flex: '0.8', display: 'flex', flexDirection: 'column', gap: '10px'}}>
                 <div style={{...styles.sheetBoxHeader, backgroundColor: '#444'}}>ATTRIBUTI</div>
                 {Object.entries(trainer.stats).map(([k, v]) => (
                   <div key={k} style={styles.sheetAttributeBox}>
@@ -548,18 +536,17 @@ function App() {
                   </div>
                 ))}
               </div>
-              <div style={{flex: '2', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '15px'}}>
+              <div style={{flex: '2', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px'}}>
                 {renderTrainerSkillGroup("COMBATTIMENTO", ['Brawl', 'Throw', 'Evasion', 'Weapons'])}
                 {renderTrainerSkillGroup("SOPRAVVIVENZA", ['Alert', 'Athletic', 'Nature', 'Stealth', 'Survival'])}
                 {renderTrainerSkillGroup("SOCIALI", ['Allure', 'Etiquette', 'Intimidate', 'Perform'])}
                 {renderTrainerSkillGroup("CONOSCENZA", ['Crafts', 'Lore', 'Medicine', 'Science', 'Command'])}
               </div>
             </div>
-
             <div style={{marginTop: '25px', ...styles.sheetBox}}>
               <div style={styles.sheetBoxHeader}>INVENTARIO</div>
               <div style={{padding: '15px'}}>
-                <div style={{display:'flex', gap: 10, marginBottom: 15, flexWrap: 'wrap'}}>
+                <div style={{display:'flex', gap: 10, marginBottom: 15}}>
                   <input list="strumenti-disponibili" style={styles.searchBar} value={itemSelezionato} onChange={(e) => setItemSelezionato(e.target.value)} placeholder="Strumento..." />
                   <datalist id="strumenti-disponibili">{listaStrumenti.map(item => <option key={item} value={item} />)}</datalist>
                   <button onClick={() => { if(itemSelezionato) { aggiungiZaino(itemSelezionato); setItemSelezionato(""); } }} style={styles.btnCercaMini}> + </button>
@@ -609,15 +596,19 @@ function App() {
                           <button onClick={() => setSquadra(squadra.map(x => x.id === p.id ? {...x, curHP: x.curHP+1} : x))} style={styles.btnCircleMin}>+</button>
                         </div>
                       </div>
-                      <div style={{...styles.sheetInputBox, backgroundColor: '#1b2d2d', borderColor: '#4bcffa'}}>
-                        <label style={{...styles.sheetLabel, color: '#4bcffa'}}>VOLONTÀ</label>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '15px' }}>
-                          <button onClick={() => setSquadra(squadra.map(x => x.id === p.id ? {...x, curWill: (x.curWill||0)-1} : x))} style={styles.btnCircleMinBlue}>-</button>
-                          <span style={{ fontSize: '22px', color: '#4bcffa', fontWeight: 'bold' }}>{p.curWill || 0}</span>
-                          <button onClick={() => setSquadra(squadra.map(x => x.id === p.id ? {...x, curWill: (x.curWill||0)+1} : x))} style={styles.btnCircleMinBlue}>+</button>
-                        </div>
-                      </div>
                     </div>
+                  </div>
+                </div>
+
+                <div style={{...styles.sheetBox, marginBottom: '20px'}}>
+                  <div style={styles.sheetBoxHeader}>STATI ALTERATI</div>
+                  <div style={{ padding: '10px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                    {statiPossibili.map(s => (
+                      <button key={s.id} onClick={() => {
+                        const active = p.activeStatus.includes(s.id) ? p.activeStatus.filter(x => x!==s.id) : [...p.activeStatus, s.id];
+                        setSquadra(squadra.map(x => x.id === p.id ? {...x, activeStatus: active} : x));
+                      }} style={{...styles.statusBtn, backgroundColor: p.activeStatus.includes(s.id) ? s.col : '#2d2d2d'}}>{s.label}</button>
+                    ))}
                   </div>
                 </div>
 
@@ -664,9 +655,10 @@ function App() {
                             <div style={{marginTop: 10, borderTop: `2px solid ${typeColors[info.Type]}`, paddingTop: 10}}>
                               <div style={{display:'flex', justifyContent:'space-between', fontSize: 14}}>
                                 <span style={{color: typeColors[info.Type], fontWeight:'bold'}}>{tradTipi[info.Type]}</span>
-                                <span>🎲 {prec} | 💥 {dmgVal === "-" ? "-" : (baseStat + dmgVal)}</span>
+                                <span>{tCatMosse(info.Category)}</span>
+                                <span style={{cursor:'pointer'}} onClick={() => tiraDadi(prec, tMossa(mossaNome))}>🎲 {prec} | 💥 {dmgVal === "-" ? "-" : (baseStat + dmgVal)}</span>
                               </div>
-                              <div style={{fontSize: 12, color:'#aaa', fontStyle:'italic', marginTop: 5}} onClick={() => tiraDadi(prec, tMossa(mossaNome))}>{info.Effect || info.Description}</div>
+                              <div style={{fontSize: 12, color:'#aaa', fontStyle:'italic', marginTop: 5}}>{info.Effect || info.Description}</div>
                             </div>
                           )}
                         </div>
