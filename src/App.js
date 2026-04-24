@@ -21,7 +21,6 @@ const db = getFirestore(app);
 
 // --- FIX PERCORSO (LOCALE VS ONLINE) ---
 const BASE_URL = window.location.hostname.includes("localhost") ? "" : "/pokerole-cloud";
-const cleanUrl = (path) => path.replace(/\/+/g, '/');
 
 // --- COLORI E DIZIONARI UFFICIALI ---
 const typeColors = {
@@ -324,9 +323,9 @@ function App() {
 
   const fetchData = async (folder, name) => {
     try {
-      // Usiamo cleanUrl per evitare che GitHub si confonda con gli slash
-      const url = cleanUrl(`${BASE_URL}/data/${folder}/${encodeURIComponent(name)}.json`);
-      const res = await fetch(url);
+      const nomePulito = encodeURIComponent(name);
+      // Costruiamo il percorso esattamente come nel 4.0
+      const res = await fetch(`${BASE_URL}/data/${folder}/${nomePulito}.json`);
       if (!res.ok) return null;
       return await res.json();
     } catch (e) { return null; }
@@ -426,24 +425,37 @@ function App() {
 
   const renderImmagine = (tipo, nome, stile) => {
     const cartella = tipo === 'pokemon' ? 'BookSprites' : 'Items';
-    
-    // Costruiamo il percorso pulito
-    const percorso = cleanUrl(`${BASE_URL}/data/images/${cartella}/${encodeURIComponent(nome)}.png`);
+    const nomePulito = encodeURIComponent(nome);
 
     return (
       <img 
         key={nome}
-        src={percorso} 
+        src={`${BASE_URL}/data/images/${cartella}/${nomePulito}.png`} 
         alt={nome} 
         style={stile} 
         onError={(e) => { 
-          // Se l'immagine specifica non esiste (es. la forma), prova quella base
-          if (!e.target.dataset.triedBase && tipo === 'pokemon') {
+          // 1° Tentativo: Prova tutto minuscolo
+          if (!e.target.dataset.triedLower) {
+            e.target.dataset.triedLower = "true";
+            e.target.src = `${BASE_URL}/data/images/${cartella}/${nome.toLowerCase()}.png`;
+          } 
+          // 2° Tentativo: Prova senza spazi (es. "Poke Ball" -> "PokeBall")
+          else if (!e.target.dataset.triedNoSpace) {
+            e.target.dataset.triedNoSpace = "true";
+            e.target.src = `${BASE_URL}/data/images/${cartella}/${nome.replace(/ /g, '')}.png`;
+          } 
+          // 3° Tentativo: Prova il nome base (prima della parentesi, es. "Toxtricity (Amped Form)" -> "Toxtricity")
+          else if (!e.target.dataset.triedBase && tipo === 'pokemon') {
             e.target.dataset.triedBase = "true";
             const pkmBase = nome.split(' (')[0];
-            e.target.src = cleanUrl(`${BASE_URL}/data/images/${cartella}/${encodeURIComponent(pkmBase)}.png`);
-          } else {
-            // Se non c'è proprio nulla, nascondi l'icona rotta
+            e.target.src = `${BASE_URL}/data/images/${cartella}/${encodeURIComponent(pkmBase)}.png`;
+          } 
+          // 4° Tentativo: Prova l'estensione maiuscola .PNG
+          else if (!e.target.dataset.triedCaps) {
+            e.target.dataset.triedCaps = "true";
+            e.target.src = e.target.src.replace('.png', '.PNG');
+          }
+          else {
             e.target.style.display = 'none'; 
           }
         }} 
