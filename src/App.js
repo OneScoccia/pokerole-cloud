@@ -423,29 +423,47 @@ function App() {
     }
   };
 
-  const renderImmagine = (pkm) => {
-  if (!pkm) return "";
+   const renderImmagine = (tipo, nome, stile) => {
+    const cartella = tipo === 'pokemon' ? 'BookSprites' : 'Items';
+    const nomePulito = encodeURIComponent(nome);
 
-  // 1. Se il JSON ha già un campo "Sprite", usiamo quello (è la via più sicura)
-  if (pkm.Sprite) {
-    return `${BASE_URL}/data/images/BookSprites/${pkm.Sprite}`;
-  }
+    return (
+      <img 
+        key={nome}
+        src={`${BASE_URL}/data/images/${cartella}/${nomePulito}.png`} 
+        alt={nome} 
+        style={stile} 
+        onError={(e) => { 
+          // 1° Tentativo: Prova tutto minuscolo
+          if (!e.target.dataset.triedLower) {
+            e.target.dataset.triedLower = "true";
+            e.target.src = `${BASE_URL}/data/images/${cartella}/${nome.toLowerCase()}.png`;
+          } 
+          // 2° Tentativo: Prova senza spazi (es. "Poke Ball" -> "PokeBall")
+          else if (!e.target.dataset.triedNoSpace) {
+            e.target.dataset.triedNoSpace = "true";
+            e.target.src = `${BASE_URL}/data/images/${cartella}/${nome.replace(/ /g, '')}.png`;
+          } 
+          // 3° Tentativo: Prova il nome base (prima della parentesi, es. "Toxtricity (Amped Form)" -> "Toxtricity")
+          else if (!e.target.dataset.triedBase && tipo === 'pokemon') {
+            e.target.dataset.triedBase = "true";
+            const pkmBase = nome.split(' (')[0];
+            e.target.src = `${BASE_URL}/data/images/${cartella}/${encodeURIComponent(pkmBase)}.png`;
+          } 
+          // 4° Tentativo: Prova l'estensione maiuscola .PNG
+          else if (!e.target.dataset.triedCaps) {
+            e.target.dataset.triedCaps = "true";
+            e.target.src = e.target.src.replace('.png', '.PNG');
+          }
+          else {
+            e.target.style.display = 'none'; 
+          }
+        }} 
+      />
+    );
+  };
 
-  // 2. Altrimenti, costruiamo il nome basandoci su Nome e Variante
-  let nomeFile = pkm.Name;
 
-  if (pkm.Variant && pkm.Variant !== "" && pkm.Variant !== "Normal") {
-    // Trasforma "Mega X" in "Mega-X" e lo aggiunge: "Charizard-Mega-X"
-    const varianteFormattata = pkm.Variant.replace(/\s+/g, '-');
-    nomeFile = `${pkm.Name}-${varianteFormattata}`;
-  }
-
-  // Rimuoviamo eventuali caratteri speciali che potrebbero rompere l'URL
-  // ma manteniamo i trattini necessari per le forme
-  nomeFile = nomeFile.replace(/[pkmn?]/g, ''); 
-
-  return `${BASE_URL}/data/images/BookSprites/${nomeFile}.png`;
-};
 
 
   const renderTrainerSkillGroup = (title, skillsArray) => (
