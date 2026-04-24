@@ -19,7 +19,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// --- FIX PERCORSO (LOCALE VS ONLINE) ---
+// --- LOGICA PERCORSO (FIX LOCALE/ONLINE) ---
 const BASE_URL = window.location.hostname.includes("localhost") ? "" : "/pokerole-cloud";
 
 // --- COLORI E DIZIONARI UFFICIALI ---
@@ -313,16 +313,17 @@ function App() {
       await setDoc(doc(db, "utenti", user.uid), {
         trainer, squadra, zaino
       });
-      alert("✅ Salvataggio sul Cloud completato con successo!");
+      alert("✅ Salvataggio sul Cloud completato!");
     } catch (err) {
-      alert("❌ Errore durante il salvataggio: " + err.message);
+      alert("❌ Errore durante il salvataggio.");
     }
   };
 
   const fetchData = async (folder, name) => {
     try {
       const nomePulito = encodeURIComponent(name);
-      const res = await fetch(`${BASE_URL}/data/${folder}/${nomePulito}.json`);
+      const url = `${BASE_URL}/data/${folder}/${nomePulito}.json`;
+      const res = await fetch(url);
       if (!res.ok) return null;
       return await res.json();
     } catch (e) { return null; }
@@ -362,7 +363,7 @@ function App() {
       const forme = await trovaFormeAlternative(pkm.Name);
       pkm.availableForms = forme;
       setPkmTrovato(pkm);
-    } else { alert("Pokémon non trovato. Controlla il nome esatto."); }
+    } else { alert("Pokémon non trovato."); }
   };
 
   const aggiungiZaino = async (nomeItemScritto) => {
@@ -373,7 +374,7 @@ function App() {
     if (item) {
       setZaino([...zaino, { ...item, qty: 1 }]);
     } else { 
-      const conferma = window.confirm(`L'oggetto "${nomeFormattato}" non è stato trovato nel database.\nVuoi aggiungerlo comunque come Oggetto Custom?`);
+      const conferma = window.confirm(`"${nomeFormattato}" non trovato. Aggiungere come oggetto custom?`);
       if (conferma) {
         setZaino([...zaino, { Name: nomeIngleseDB, customName: nomeFormattato, Description: "Oggetto personalizzato", qty: 1 }]);
       }
@@ -415,7 +416,6 @@ function App() {
   const renderImmagine = (tipo, nome, stile) => {
     const cartella = tipo === 'pokemon' ? 'BookSprites' : 'Items';
     const nomePulito = encodeURIComponent(nome);
-
     return (
       <img 
         key={nome}
@@ -431,8 +431,8 @@ function App() {
             e.target.src = `${BASE_URL}/data/images/${cartella}/${nome.replace(/ /g, '')}.png`;
           } else if (!e.target.dataset.triedBase && tipo === 'pokemon') {
             e.target.dataset.triedBase = "true";
-            const nomeSoloPkm = nome.split(' (')[0];
-            e.target.src = `${BASE_URL}/data/images/${cartella}/${nomeSoloPkm}.png`;
+            const pkmBase = nome.split(' (')[0];
+            e.target.src = `${BASE_URL}/data/images/${cartella}/${pkmBase}.png`;
           } else {
             e.target.style.display = 'none'; 
           }
@@ -469,7 +469,6 @@ function App() {
     </div>
   );
 
-  // --- RENDER LOGIN ---
   if (!user) {
     return (
       <div style={{...styles.container, display: 'flex', justifyContent: 'center', alignItems: 'center'}}>
@@ -488,14 +487,7 @@ function App() {
               <input type="password" style={styles.sheetInput} value={password} onChange={e => setPassword(e.target.value)} required />
             </div>
             {authError && <div style={{color: '#ff4757', fontSize: '13px', textAlign: 'center', fontWeight: 'bold'}}>{authError}</div>}
-            
-            <button type="submit" style={styles.btnSuccess}>
-              ENTRA NEL TERMINALE
-            </button>
-            
-            <div style={{fontSize: '12px', color: '#888', textAlign: 'center', marginTop: '10px'}}>
-              Accesso riservato. Chiedi le credenziali al Master della Lega.
-            </div>
+            <button type="submit" style={styles.btnSuccess}>ENTRA NEL TERMINALE</button>
           </form>
         </div>
       </div>
@@ -519,37 +511,21 @@ function App() {
           <div style={styles.physicalSheet}>
             <div style={styles.sheetHeader}>
               <h1 style={{margin: 0, fontSize: '28px', letterSpacing: '2px'}}>SCHEDA DELL'ALLENATORE</h1>
-              <h3 style={{margin: '5px 0 0 0', fontSize: '14px', color: '#aaa', fontWeight: 'normal'}}>LEGA POKÉMON • LICENZA DA ALLENATORE</h3>
             </div>
 
             <div style={styles.sheetGridRow}>
-              <div style={styles.sheetInputBox}>
-                <label style={styles.sheetLabel}>NOME</label>
-                <input style={styles.sheetInput} value={trainer.nome} onChange={e => setTrainer({...trainer, nome: e.target.value})} />
-              </div>
-              <div style={styles.sheetInputBox}>
-                <label style={styles.sheetLabel}>GIOCATORE</label>
-                <input style={styles.sheetInput} value={trainer.player} onChange={e => setTrainer({...trainer, player: e.target.value})} />
-              </div>
-              <div style={{...styles.sheetInputBox, flex: 0.5}}>
-                <label style={styles.sheetLabel}>ETÀ</label>
-                <input type="number" style={styles.sheetInput} value={trainer.age} onChange={e => setTrainer({...trainer, age: e.target.value})} />
-              </div>
+              <div style={styles.sheetInputBox}><label style={styles.sheetLabel}>NOME</label><input style={styles.sheetInput} value={trainer.nome} onChange={e => setTrainer({...trainer, nome: e.target.value})} /></div>
+              <div style={styles.sheetInputBox}><label style={styles.sheetLabel}>GIOCATORE</label><input style={styles.sheetInput} value={trainer.player} onChange={e => setTrainer({...trainer, player: e.target.value})} /></div>
+              <div style={{...styles.sheetInputBox, flex: 0.5}}><label style={styles.sheetLabel}>ETÀ</label><input type="number" style={styles.sheetInput} value={trainer.age} onChange={e => setTrainer({...trainer, age: e.target.value})} /></div>
             </div>
             <div style={styles.sheetGridRow}>
-              <div style={styles.sheetInputBox}>
-                <label style={styles.sheetLabel}>NATURA</label>
-                <input style={styles.sheetInput} value={trainer.nature} onChange={e => setTrainer({...trainer, nature: e.target.value})} />
-              </div>
-              <div style={styles.sheetInputBox}>
-                <label style={styles.sheetLabel}>CONCETTO</label>
-                <input style={styles.sheetInput} value={trainer.concept} onChange={e => setTrainer({...trainer, concept: e.target.value})} />
-              </div>
+              <div style={styles.sheetInputBox}><label style={styles.sheetLabel}>NATURA</label><input style={styles.sheetInput} value={trainer.nature} onChange={e => setTrainer({...trainer, nature: e.target.value})} /></div>
+              <div style={styles.sheetInputBox}><label style={styles.sheetLabel}>CONCETTO</label><input style={styles.sheetInput} value={trainer.concept} onChange={e => setTrainer({...trainer, concept: e.target.value})} /></div>
             </div>
 
             <div style={{...styles.sheetGridRow, marginTop: '15px'}}>
               <div style={{...styles.sheetInputBox, backgroundColor: '#2d1b1b', borderColor: '#ff4757'}}>
-                <label style={{...styles.sheetLabel, color: '#ff4757'}}>PUNTI SALUTE (PS)</label>
+                <label style={{...styles.sheetLabel, color: '#ff4757'}}>PS</label>
                 <input type="number" style={{...styles.sheetInput, color: '#ff4757', textAlign: 'center', fontSize: '24px'}} value={trainer.currentHP} onChange={e => setTrainer({...trainer, currentHP: e.target.value})} />
               </div>
               <div style={{...styles.sheetInputBox, backgroundColor: '#1b2d2d', borderColor: '#4bcffa'}}>
@@ -557,12 +533,8 @@ function App() {
                 <input type="number" style={{...styles.sheetInput, color: '#4bcffa', textAlign: 'center', fontSize: '24px'}} value={trainer.currentWill} onChange={e => setTrainer({...trainer, currentWill: e.target.value})} />
               </div>
               <div style={styles.sheetInputBox}>
-                <label style={styles.sheetLabel}>DENARO (₽)</label>
+                <label style={styles.sheetLabel}>₽</label>
                 <input type="number" style={{...styles.sheetInput, textAlign: 'center', fontSize: '20px'}} value={trainer.money} onChange={e => setTrainer({...trainer, money: e.target.value})} />
-              </div>
-              <div style={styles.sheetInputBox}>
-                <label style={styles.sheetLabel}>RANGO / FIDUCIA</label>
-                <input type="number" style={{...styles.sheetInput, textAlign: 'center', fontSize: '20px'}} value={trainer.confidence} onChange={e => setTrainer({...trainer, confidence: e.target.value})} />
               </div>
             </div>
 
@@ -585,67 +557,49 @@ function App() {
             </div>
 
             <div style={{marginTop: '25px', ...styles.sheetBox}}>
-              <div style={styles.sheetBoxHeader}>INVENTARIO & STRUMENTI</div>
+              <div style={styles.sheetBoxHeader}>INVENTARIO</div>
               <div style={{padding: '15px'}}>
                 <div style={{display:'flex', gap: 10, marginBottom: 15, flexWrap: 'wrap'}}>
-                  <input list="strumenti-disponibili" style={styles.searchBar} value={itemSelezionato} onChange={(e) => setItemSelezionato(e.target.value)} placeholder="Seleziona o scrivi Strumento..." />
-                  <datalist id="strumenti-disponibili">
-                    {listaStrumenti.map(item => <option key={item} value={item} />)}
-                  </datalist>
-                  <button onClick={() => { if(itemSelezionato) { aggiungiZaino(itemSelezionato); setItemSelezionato(""); } }} style={styles.btnCercaMini}> AGGIUNGI </button>
+                  <input list="strumenti-disponibili" style={styles.searchBar} value={itemSelezionato} onChange={(e) => setItemSelezionato(e.target.value)} placeholder="Strumento..." />
+                  <datalist id="strumenti-disponibili">{listaStrumenti.map(item => <option key={item} value={item} />)}</datalist>
+                  <button onClick={() => { if(itemSelezionato) { aggiungiZaino(itemSelezionato); setItemSelezionato(""); } }} style={styles.btnCercaMini}> + </button>
                 </div>
-                {zaino.map((item, i) => {
-                  const nomeItemDisplay = item.customName || tItem(item.Name); 
-                  return (
-                    <div key={i} style={styles.sheetItemRow}>
-                      {renderImmagine('item', item.Name, styles.itemImage)}
-                      <div style={{flex:1, marginLeft: 15}}>
-                        <strong style={{fontSize: 18, color: '#fff'}}>{nomeItemDisplay}</strong>
-                        <div style={{fontSize: 13, color: '#aaa', marginTop: 3}}>
-                          <div style={{fontStyle: 'italic'}}>{item.Description}</div>
-                        </div>
-                      </div>
-                      <div style={{display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5}}>
-                        <input type="number" value={item.qty} style={styles.sheetMiniInput} onChange={e => { const val = parseInt(e.target.value) || 0; if (val <= 0) rimuoviDalloZaino(i); else { const n = [...zaino]; n[i].qty = val; setZaino(n); } }}/>
-                        <button onClick={() => rimuoviDalloZaino(i)} style={styles.btnDeletePiccolo}>❌</button>
-                      </div>
+                {zaino.map((item, i) => (
+                  <div key={i} style={styles.sheetItemRow}>
+                    {renderImmagine('item', item.Name, styles.itemImage)}
+                    <div style={{flex:1, marginLeft: 15}}><strong style={{color: '#fff'}}>{item.customName || tItem(item.Name)}</strong></div>
+                    <div style={{display: 'flex', alignItems: 'center', gap: 10}}>
+                      <input type="number" value={item.qty} style={styles.sheetMiniInput} onChange={e => { const val = parseInt(e.target.value) || 0; if (val <= 0) rimuoviDalloZaino(i); else { const n = [...zaino]; n[i].qty = val; setZaino(n); } }}/>
+                      <button onClick={() => rimuoviDalloZaino(i)} style={styles.btnDeletePiccolo}>❌</button>
                     </div>
-                  );
-                })}
+                  </div>
+                ))}
               </div>
             </div>
           </div>
         )}
 
         {tab === "squadra" && (
-          <div style={styles.squadraContainer}>
+          <div>
             {squadra.map(p => (
               <div key={p.id} style={{...styles.physicalSheet, marginBottom: '40px', borderLeft: '8px solid #ff4757'}}>
-                <div style={styles.sheetHeader}>
-                  <h1 style={{margin: 0, fontSize: '28px', letterSpacing: '2px'}}>SCHEDA DEL POKÉMON</h1>
-                </div>
-
+                <div style={styles.sheetHeader}><h1>SCHEDA POKÉMON</h1></div>
                 <div style={{ display: 'flex', gap: '20px', marginBottom: '20px', flexWrap: 'wrap' }}>
                   <div style={{ flex: '0 0 140px', textAlign: 'center', backgroundColor: '#222', borderRadius: '15px', padding: '10px', display: 'flex', justifyContent: 'center', alignItems: 'center', margin: '0 auto' }}>
                     {renderImmagine('pokemon', p.currentForm, { width: '120px', height: '120px', objectFit: 'contain' })}
                   </div>
-                  
                   <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '10px', minWidth: '250px' }}>
                     <div style={styles.sheetGridRow}>
-                      <div style={{...styles.sheetInputBox, flex: 2}}>
-                        <label style={styles.sheetLabel}>NOME / SPECIE</label>
-                        <input style={styles.sheetInput} value={tNomePkm(p.Name)} readOnly /> 
-                      </div>
+                      <div style={{...styles.sheetInputBox, flex: 2}}><label style={styles.sheetLabel}>NOME</label><input style={styles.sheetInput} value={tNomePkm(p.Name)} readOnly /></div>
                       {p.availableForms && p.availableForms.length > 1 && (
                         <div style={{...styles.sheetInputBox, flex: 1.5}}>
-                          <label style={styles.sheetLabel}>FORMA / MEGA</label>
+                          <label style={styles.sheetLabel}>FORMA</label>
                           <select style={{...styles.sheetInput, backgroundColor: '#252525'}} value={p.currentForm} onChange={(e) => scambiaForma(p.id, e.target.value)}>
                              {p.availableForms.map(f => <option key={f} value={f}>{tNomePkm(f)}</option>)}
                           </select>
                         </div>
                       )}
                     </div>
-                    
                     <div style={styles.sheetGridRow}>
                       <div style={{...styles.sheetInputBox, backgroundColor: '#2d1b1b', borderColor: '#ff4757'}}>
                         <label style={{...styles.sheetLabel, color: '#ff4757'}}>PS</label>
@@ -664,38 +618,6 @@ function App() {
                         </div>
                       </div>
                     </div>
-
-                    <div style={styles.sheetGridRow}>
-                      <div style={{...styles.sheetInputBox, flex: 1.5}}>
-                        <label style={styles.sheetLabel}>STRUMENTO TENUTO</label>
-                        <select style={{...styles.sheetInput, backgroundColor: '#252525'}} value={p.heldItem ? p.heldItem.Name : ""} onChange={(e) => {
-                          const itemObj = zaino.find(i => i.Name === e.target.value);
-                          setSquadra(squadra.map(x => x.id === p.id ? {...x, heldItem: itemObj || null} : x));
-                        }}>
-                          <option value="">Nessuno</option>
-                          {zaino.map(i => <option key={i.Name} value={i.Name}>{i.customName || tItem(i.Name)}</option>)}
-                        </select>
-                      </div>
-                      <div style={styles.sheetInputBox}>
-                        <label style={styles.sheetLabel}>TIPO</label>
-                        <div>
-                          <span style={{...styles.typeBadge, backgroundColor: typeColors[p.Type1]}}>{tradTipi[p.Type1] || p.Type1}</span>
-                          {p.Type2 && p.Type2 !== 'None' && <span style={{...styles.typeBadge, backgroundColor: typeColors[p.Type2], marginLeft: 5}}>{tradTipi[p.Type2] || p.Type2}</span>}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div style={{...styles.sheetBox, marginBottom: '20px'}}>
-                  <div style={styles.sheetBoxHeader}>STATI ALTERATI</div>
-                  <div style={{ padding: '10px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                    {statiPossibili.map(s => (
-                      <button key={s.id} onClick={() => {
-                        const active = p.activeStatus.includes(s.id) ? p.activeStatus.filter(x => x!==s.id) : [...p.activeStatus, s.id];
-                        setSquadra(squadra.map(x => x.id === p.id ? {...x, activeStatus: active} : x));
-                      }} style={{...styles.statusBtn, backgroundColor: p.activeStatus.includes(s.id) ? s.col : '#2d2d2d'}}>{s.label}</button>
-                    ))}
                   </div>
                 </div>
 
@@ -709,7 +631,6 @@ function App() {
                       </div>
                     ))}
                   </div>
-
                   <div style={{ flex: '2', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '15px' }}>
                     {renderPkmSkillGroup("LOTTA", ['Brawl', 'Channel', 'Clash', 'Evasion'], p)}
                     {renderPkmSkillGroup("SOPRAVVIVENZA", ['Alert', 'Athletic', 'Nature', 'Stealth'], p)}
@@ -723,47 +644,29 @@ function App() {
                     {[0, 1, 2, 3].map(i => {
                       const mossaNome = p.selectedMoves[i];
                       const info = dettagliMosse[mossaNome];
-                      let baseStat = 0, nomeStat = "", accVal = 0, dmgVal = "-";
+                      let baseStat = 0, accVal = 0, dmgVal = "-";
                       if (info) {
-                        if (info.Category === "Special") { baseStat = p.Special; nomeStat = "SPE"; }
-                        else if (info.Category === "Physical") { baseStat = p.Strength; nomeStat = "FOR"; }
-                        else { baseStat = Math.max(p.Insight, p.Dexterity); nomeStat = p.Insight > p.Dexterity ? "ACU" : "DES"; } 
+                        baseStat = info.Category === "Special" ? p.Special : (info.Category === "Physical" ? p.Strength : Math.max(p.Insight, p.Dexterity));
                         accVal = parseInt(info.Accuracy) || 0;
-                        if (info.Power || info.Damage) dmgVal = parseInt(info.Power || info.Damage) || 0;
+                        dmgVal = parseInt(info.Power || info.Damage) || "-";
                       }
-                      const dadiPrecisione = baseStat + trainer.skills.Command + accVal;
-                      const totaleDanno = dmgVal !== "-" ? (baseStat + dmgVal) : "-";
+                      const prec = baseStat + trainer.skills.Command + accVal;
                       return (
                         <div key={i} style={styles.sheetMoveCard}>
-                          <select style={{...styles.sheetInput, backgroundColor: '#111', padding: '10px', borderRadius: '5px', marginBottom: '10px'}} value={mossaNome} onChange={(e) => {
-                            const nuove = [...p.selectedMoves]; nuove[i] = e.target.value;
-                            setSquadra(squadra.map(x => x.id === p.id ? {...x, selectedMoves: nuove} : x));
+                          <select style={{...styles.sheetInput, backgroundColor: '#111', padding: '10px'}} value={mossaNome} onChange={(e) => {
+                            const n = [...p.selectedMoves]; n[i] = e.target.value;
+                            setSquadra(squadra.map(x => x.id === p.id ? {...x, selectedMoves: n} : x));
                           }}>
-                            <option value="">-- Seleziona Mossa --</option>
+                            <option value="">-- Seleziona --</option>
                             {p.Moves.map(m => <option key={m.Name} value={m.Name}>{tMossa(m.Name)}</option>)}
                           </select>
                           {info && (
-                            <div style={{borderTop: `3px solid ${typeColors[info.Type] || '#fff'}`, paddingTop: '10px', display: 'flex', flexDirection: 'column'}}>
-                              <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '8px'}}>
-                                <span style={{fontSize: 14, color: typeColors[info.Type] || '#fff', fontWeight: 'bold', textTransform: 'uppercase'}}>{tradTipi[info.Type] || info.Type}</span>
-                                <span style={{fontSize: 12, color: '#aaa'}}>{tCatMosse(info.Category)}</span>
+                            <div style={{marginTop: 10, borderTop: `2px solid ${typeColors[info.Type]}`, paddingTop: 10}}>
+                              <div style={{display:'flex', justifyContent:'space-between', fontSize: 14}}>
+                                <span style={{color: typeColors[info.Type], fontWeight:'bold'}}>{tradTipi[info.Type]}</span>
+                                <span>🎲 {prec} | 💥 {dmgVal === "-" ? "-" : (baseStat + dmgVal)}</span>
                               </div>
-                              <div style={{display: 'flex', gap: '10px', backgroundColor: '#1a1a1a', padding: '8px', borderRadius: '8px'}}>
-                                <div style={{flex: 1, textAlign: 'center'}}>
-                                  <div style={{fontSize: '10px', color: '#888'}}>PRECISIONE</div>
-                                  <div style={{fontSize: '18px', fontWeight: 'bold', color: '#4bcffa', cursor: 'pointer'}} onClick={() => tiraDadi(dadiPrecisione, tMossa(mossaNome))}>
-                                    🎲 {dadiPrecisione}
-                                  </div>
-                                </div>
-                                <div style={{width: '1px', backgroundColor: '#333'}}></div>
-                                <div style={{flex: 1, textAlign: 'center'}}>
-                                  <div style={{fontSize: '10px', color: '#888'}}>DANNO</div>
-                                  <div style={{fontSize: '18px', fontWeight: 'bold', color: '#ff4757'}}>{totaleDanno}</div>
-                                </div>
-                              </div>
-                              <div style={{fontSize: '12px', color: '#ccc', marginTop: '10px', fontStyle: 'italic', lineHeight: '1.4'}}>
-                                {info.Effect || info.Description}
-                              </div>
+                              <div style={{fontSize: 12, color:'#aaa', fontStyle:'italic', marginTop: 5}} onClick={() => tiraDadi(prec, tMossa(mossaNome))}>{info.Effect || info.Description}</div>
                             </div>
                           )}
                         </div>
@@ -771,10 +674,7 @@ function App() {
                     })}
                   </div>
                 </div>
-
-                <div style={{textAlign: 'right', marginTop: '20px'}}>
-                  <button onClick={() => setSquadra(squadra.filter(x => x.id !== p.id))} style={styles.btnDelPkm}>RIMUOVI DALLA SQUADRA</button>
-                </div>
+                <div style={{textAlign: 'right', marginTop: '10px'}}><button onClick={() => setSquadra(squadra.filter(x => x.id !== p.id))} style={styles.btnDelPkm}>RIMUOVI</button></div>
               </div>
             ))}
           </div>
@@ -782,21 +682,13 @@ function App() {
 
         {tab === "pokedex" && (
           <div style={{textAlign:'center'}}>
-            <input list="pokemon-disponibili" style={styles.bigSearch} value={ricerca} onChange={e => setRicerca(e.target.value)} placeholder="Seleziona o scrivi nome Pokémon..." />
-            <datalist id="pokemon-disponibili">
-              {listaPokemon.map(pkm => <option key={pkm} value={pkm}>{tNomePkm(pkm)}</option>)}
-            </datalist>
-            <button onClick={cercaPokemon} style={styles.btnCerca}>CERCA NEL DATABASE</button>
+            <input list="pokemon-disponibili" style={styles.bigSearch} value={ricerca} onChange={e => setRicerca(e.target.value)} placeholder="Nome Pokémon..." />
+            <datalist id="pokemon-disponibili">{listaPokemon.map(pkm => <option key={pkm} value={pkm}>{tNomePkm(pkm)}</option>)}</datalist>
+            <button onClick={cercaPokemon} style={styles.btnCerca}>CERCA</button>
             {pkmTrovato && (
               <div style={styles.card}>
-                <div style={{...styles.imgContainer, margin: '0 auto', width: 150}}>
-                  {renderImmagine('pokemon', pkmTrovato.Name, {width: 130, height: 130, objectFit: 'contain'})}
-                </div>
-                <h2 style={{color: '#fff', fontSize: 32, marginTop: 15}}>{tNomePkm(pkmTrovato.Name)}</h2>
-                <div style={{marginBottom: 15}}>
-                  <span style={{...styles.typeBadge, backgroundColor: typeColors[pkmTrovato.Type1]}}>{tradTipi[pkmTrovato.Type1] || pkmTrovato.Type1}</span>
-                  {pkmTrovato.Type2 && pkmTrovato.Type2 !== 'None' && <span style={{...styles.typeBadge, backgroundColor: typeColors[pkmTrovato.Type2], marginLeft: 5}}>{tradTipi[pkmTrovato.Type2] || pkmTrovato.Type2}</span>}
-                </div>
+                <div style={{backgroundColor:'#222', borderRadius:20, padding:15, display:'inline-block'}}>{renderImmagine('pokemon', pkmTrovato.Name, {width: 130})}</div>
+                <h2 style={{color: '#fff'}}>{tNomePkm(pkmTrovato.Name)}</h2>
                 <button onClick={aggiungiASquadra} style={styles.btnSuccess}>AGGIUNGI AL TEAM</button>
               </div>
             )}
@@ -807,49 +699,40 @@ function App() {
   );
 }
 
-// --- STILI CSS ---
 const styles = {
   container: { backgroundColor: '#121212', minHeight: '100vh', color: '#eee', fontFamily: 'sans-serif', paddingBottom: 50 },
   navbar: { display: 'flex', backgroundColor: '#1f1f1f', position: 'sticky', top: 0, zIndex: 100, boxShadow: '0 4px 15px rgba(0,0,0,0.5)', flexWrap: 'wrap' },
-  navBtn: { flex: 1, padding: '20px', border: 'none', background: 'none', color: '#888', fontWeight: 'bold', fontSize: '15px', cursor: 'pointer', minWidth: '100px' },
-  navActive: { flex: 1, padding: '20px', border: 'none', background: 'none', color: '#ff4757', borderBottom: '5px solid #ff4757', fontWeight: 'bold', fontSize: '15px', minWidth: '100px' },
-  mainContent: { padding: '20px', maxWidth: '850px', margin: '0 auto' },
-  
-  physicalSheet: { backgroundColor: '#1e1e1e', padding: '25px', borderRadius: '15px', border: '1px solid #333', boxShadow: '0 10px 30px rgba(0,0,0,0.8)' },
-  sheetHeader: { borderBottom: '2px solid #555', paddingBottom: '15px', marginBottom: '20px', textAlign: 'center' },
+  navBtn: { flex: 1, padding: '15px', border: 'none', background: 'none', color: '#888', fontWeight: 'bold', fontSize: '13px', cursor: 'pointer', minWidth: '80px' },
+  navActive: { flex: 1, padding: '15px', border: 'none', background: 'none', color: '#ff4757', borderBottom: '4px solid #ff4757', fontWeight: 'bold', fontSize: '13px', minWidth: '80px' },
+  mainContent: { padding: '15px', maxWidth: '850px', margin: '0 auto' },
+  physicalSheet: { backgroundColor: '#1e1e1e', padding: '20px', borderRadius: '15px', border: '1px solid #333', boxShadow: '0 10px 30px rgba(0,0,0,0.8)' },
+  sheetHeader: { borderBottom: '2px solid #555', paddingBottom: '10px', marginBottom: '15px', textAlign: 'center' },
   sheetGridRow: { display: 'flex', gap: '10px', marginBottom: '10px', flexWrap: 'wrap' },
-  sheetInputBox: { flex: 1, border: '1px solid #444', backgroundColor: '#252525', borderRadius: '8px', padding: '8px 12px', display: 'flex', flexDirection: 'column', minWidth: '140px' },
-  sheetLabel: { fontSize: '10px', color: '#888', fontWeight: 'bold', marginBottom: '4px', textTransform: 'uppercase' },
-  sheetInput: { background: 'none', border: 'none', color: '#fff', fontSize: '16px', fontWeight: 'bold', width: '100%', outline: 'none' },
-  
-  sheetBox: { border: '1px solid #444', borderRadius: '10px', overflow: 'hidden', backgroundColor: '#222' },
-  sheetBoxHeader: { backgroundColor: '#ff4757', color: '#fff', fontSize: '12px', fontWeight: 'bold', padding: '8px', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '1px' },
-  
-  sheetAttributeBox: { backgroundColor: '#2a2a2a', border: '1px solid #444', borderRadius: '10px', padding: '15px 10px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center' },
-  sheetAttributeLabel: { fontSize: '12px', color: '#aaa', fontWeight: 'bold', marginBottom: '5px' },
-  sheetAttributeInput: { background: 'none', border: 'none', color: '#fff', fontSize: '30px', fontWeight: 'bold', textAlign: 'center', width: '100%', outline: 'none' },
-  
-  sheetSkillRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px', borderBottom: '1px solid #333', cursor: 'pointer' },
-  sheetMiniInput: { width: '40px', background: '#111', border: '1px solid #555', color: '#fff', textAlign: 'center', borderRadius: '5px', fontSize: '16px', padding: '4px', fontWeight: 'bold' },
-  
-  sheetItemRow: { backgroundColor: '#1a1a1a', padding: '12px', borderRadius: '10px', border: '1px solid #333', display: 'flex', alignItems: 'center', marginBottom: '10px', flexWrap: 'wrap' },
-  sheetMoveCard: { backgroundColor: '#252525', border: '1px solid #444', borderRadius: '10px', padding: '15px' },
-
-  btnCircleMin: { background: 'none', border: '1px solid #ff4757', color: '#ff4757', borderRadius: '50%', width: '30px', height: '30px', fontSize: '20px', cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center' },
-  btnCircleMinBlue: { background: 'none', border: '1px solid #4bcffa', color: '#4bcffa', borderRadius: '50%', width: '30px', height: '30px', fontSize: '20px', cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center' },
-  btnDelPkm: { background: 'transparent', border: '1px solid #ff4757', color: '#ff4757', padding: '10px 20px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' },
-
-  card: { backgroundColor: '#1f1f1f', padding: '25px', borderRadius: '25px', marginBottom: '25px' },
-  searchBar: { flex: 1, padding: '15px', borderRadius: '10px', border: '1px solid #444', backgroundColor: '#1a1a1a', color: '#fff', fontSize: '16px', minWidth: '200px' },
-  btnCercaMini: { backgroundColor: '#ff4757', color: '#fff', border: 'none', borderRadius: '10px', padding: '10px 25px', fontWeight: 'bold', cursor: 'pointer' },
-  itemImage: { width: 50, height: 50, objectFit: 'contain', backgroundColor: '#111', borderRadius: 8, padding: 5 },
-  imgContainer: { backgroundColor: '#2d2d2d', borderRadius: '20px', padding: 10, display: 'flex', justifyContent: 'center', alignItems: 'center' },
-  typeBadge: { padding: '6px 12px', borderRadius: '10px', fontSize: '12px', color: '#fff', fontWeight: 'bold', textShadow: '1px 1px 2px rgba(0,0,0,0.8)', display: 'inline-block' },
-  statusBtn: { padding: '8px 12px', borderRadius: '10px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer', color: '#fff', border: 'none' },
-  bigSearch: { width: '100%', padding: '20px', borderRadius: '20px', border: 'none', backgroundColor: '#1f1f1f', color: '#fff', fontSize: '20px', marginBottom: 20 },
-  btnCerca: { backgroundColor: '#ff4757', color: '#fff', padding: '18px 30px', borderRadius: '40px', border: 'none', fontWeight: 'bold', width: '100%', fontSize: 16, cursor: 'pointer' },
-  btnSuccess: { backgroundColor: '#2ed573', color: '#fff', padding: '20px', borderRadius: '20px', border: 'none', fontWeight: 'bold', width: '100%', marginTop: '20px', fontSize: 18, cursor: 'pointer' },
-  btnDeletePiccolo: { background: 'none', border: 'none', fontSize: '12px', cursor: 'pointer', marginTop: '5px' }
+  sheetInputBox: { flex: 1, border: '1px solid #444', backgroundColor: '#252525', borderRadius: '8px', padding: '8px 10px', display: 'flex', flexDirection: 'column', minWidth: '120px' },
+  sheetLabel: { fontSize: '9px', color: '#888', fontWeight: 'bold', textTransform: 'uppercase' },
+  sheetInput: { background: 'none', border: 'none', color: '#fff', fontSize: '16px', fontWeight: 'bold', outline: 'none' },
+  sheetBox: { border: '1px solid #444', borderRadius: '10px', overflow: 'hidden', backgroundColor: '#222', marginBottom: 15 },
+  sheetBoxHeader: { backgroundColor: '#ff4757', color: '#fff', fontSize: '11px', fontWeight: 'bold', padding: '6px', textAlign: 'center', textTransform: 'uppercase' },
+  sheetAttributeBox: { backgroundColor: '#2a2a2a', border: '1px solid #444', borderRadius: '10px', padding: '10px', textAlign: 'center', minWidth: '100px' },
+  sheetAttributeLabel: { fontSize: '11px', color: '#aaa', fontWeight: 'bold' },
+  sheetAttributeInput: { background: 'none', border: 'none', color: '#fff', fontSize: '24px', fontWeight: 'bold', textAlign: 'center', width: '100%', outline: 'none' },
+  sheetSkillRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 10px', borderBottom: '1px solid #333', cursor: 'pointer' },
+  sheetMiniInput: { width: '35px', background: '#111', border: '1px solid #555', color: '#fff', textAlign: 'center', borderRadius: '5px', fontSize: '14px', fontWeight: 'bold' },
+  sheetItemRow: { backgroundColor: '#1a1a1a', padding: '10px', borderRadius: '10px', border: '1px solid #333', display: 'flex', alignItems: 'center', marginBottom: '8px', flexWrap: 'wrap' },
+  itemImage: { width: 40, height: 40, objectFit: 'contain' },
+  sheetMoveCard: { backgroundColor: '#252525', border: '1px solid #444', borderRadius: '10px', padding: '12px' },
+  btnCircleMin: { background: 'none', border: '1px solid #ff4757', color: '#ff4757', borderRadius: '50%', width: '25px', height: '25px', cursor: 'pointer' },
+  btnCircleMinBlue: { background: 'none', border: '1px solid #4bcffa', color: '#4bcffa', borderRadius: '50%', width: '25px', height: '25px', cursor: 'pointer' },
+  btnDelPkm: { background: 'transparent', border: '1px solid #ff4757', color: '#ff4757', padding: '5px 15px', borderRadius: '8px', cursor: 'pointer', fontSize: '11px' },
+  bigSearch: { width: '100%', padding: '15px', borderRadius: '15px', border: 'none', backgroundColor: '#1f1f1f', color: '#fff', fontSize: '18px', marginBottom: 15 },
+  btnCerca: { backgroundColor: '#ff4757', color: '#fff', padding: '15px', borderRadius: '15px', border: 'none', fontWeight: 'bold', width: '100%', cursor: 'pointer' },
+  btnSuccess: { backgroundColor: '#2ed573', color: '#fff', padding: '15px', borderRadius: '15px', border: 'none', fontWeight: 'bold', width: '100%', cursor: 'pointer' },
+  card: { backgroundColor: '#1f1f1f', padding: '20px', borderRadius: '20px', marginTop: 15 },
+  btnCercaMini: { backgroundColor: '#ff4757', color: '#fff', border: 'none', borderRadius: '8px', padding: '8px 15px', fontWeight: 'bold', cursor: 'pointer' },
+  searchBar: { flex: 1, padding: '10px', borderRadius: '8px', border: '1px solid #444', backgroundColor: '#111', color: '#fff', minWidth: '150px' },
+  typeBadge: { padding: '4px 8px', borderRadius: '6px', fontSize: '10px', color: '#fff', fontWeight: 'bold' },
+  statusBtn: { padding: '5px 10px', borderRadius: '8px', fontSize: '10px', fontWeight: 'bold', color: '#fff', border: 'none' },
+  btnDeletePiccolo: { background: 'none', border: 'none', cursor: 'pointer' }
 };
 
 export default App;
