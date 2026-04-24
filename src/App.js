@@ -272,8 +272,11 @@ function App() {
   const [itemSelezionato, setItemSelezionato] = useState("");
 
   const [trainer, setTrainer] = useState({
-    nome: "", player: "", age: 15, concept: "", nature: "",
-    money: 3000, confidence: 1, currentHP: 2, currentWill: 4,
+    nome: "", player: "", age: 15, concept: "", nature: "", 
+    rango: "", // Rango ripristinato
+    money: 3000, confidence: 1, 
+    currentHP: 2, 
+    currentWill: 4, // Volontà ripristinata
     stats: { Strength: 2, Dexterity: 2, Vitality: 2, Special: 2, Insight: 2 },
     skills: { 
       Brawl: 1, Throw: 0, Evasion: 1, Weapons: 0, 
@@ -341,11 +344,9 @@ function App() {
   const renderImmagine = (tipo, nome, stile) => {
     if (!nome) return null;
     
-    // 1. Determiniamo la cartella: Gigantamax va in HomeSprites, il resto standard
     const isGmax = nome.toLowerCase().includes("gigantamax");
     const cartella = isGmax ? 'HomeSprites' : (tipo === 'pokemon' ? 'BookSprites' : 'Items');
-    
-    const getUrl = (n, folder = cartella) => cleanUrl(`${BASE_URL}/data/images/${folder}/${encodeURIComponent(n)}.png`);
+    const getUrl = (n, f = cartella) => cleanUrl(`${BASE_URL}/data/images/${f}/${encodeURIComponent(n)}.png`);
 
     return (
       <img 
@@ -354,23 +355,24 @@ function App() {
         alt={nome} 
         style={stile} 
         onError={(e) => { 
-          // PROVA 1: Trattini al posto di spazi e parentesi (Fondamentale per Mega e G-Max su GitHub)
+          // 1. Tenta formato trattini (Toglie parentesi e parola "Form")
+          // Es: "Charizard (Mega X Form)" -> "Charizard-Mega-X"
           if (!e.target.dataset.triedDash) {
             e.target.dataset.triedDash = "true";
             const nDash = nome.replace(/\s*\(|\)/g, '').replace(/\s*Form/gi, '').trim().replace(/\s+/g, '-');
             e.target.src = getUrl(nDash);
           } 
-          // PROVA 2: Tutto minuscolo
-          else if (!e.target.dataset.triedLower) {
-            e.target.dataset.triedLower = "true";
-            e.target.src = getUrl(nome.toLowerCase());
-          }
-          // PROVA 3: Senza spazi (per gli oggetti tipo "PokeBall")
+          // 2. Tenta senza spazi (Es: "Ability Capsule" -> "AbilityCapsule")
           else if (!e.target.dataset.triedClean) {
             e.target.dataset.triedClean = "true";
             e.target.src = getUrl(nome.replace(/[\s()]+/g, ''));
           }
-          // PROVA 4: Nome Base (Fallback)
+          // 3. Tenta tutto minuscolo
+          else if (!e.target.dataset.triedLower) {
+            e.target.dataset.triedLower = "true";
+            e.target.src = getUrl(nome.toLowerCase());
+          }
+          // 4. Fallback Nome Base (Es: "Charizard")
           else if (!e.target.dataset.triedBase && tipo === 'pokemon') {
             e.target.dataset.triedBase = "true";
             e.target.src = getUrl(nome.split(' (')[0]);
@@ -501,14 +503,15 @@ function App() {
         {tab === "trainer" && (
           <div style={styles.physicalSheet}>
             <div style={styles.sheetHeader}><h1>SCHEDA ALLENATORE</h1></div>
-            <div style={styles.sheetGridRow}>
-              <div style={styles.sheetInputBox}><label style={styles.sheetLabel}>NOME</label><input style={styles.sheetInput} value={trainer.nome} onChange={e => setTrainer({...trainer, nome: e.target.value})} /></div>
-              <div style={styles.sheetInputBox}><label style={styles.sheetLabel}>₽</label><input type="number" style={styles.sheetInput} value={trainer.money} onChange={e => setTrainer({...trainer, money: e.target.value})} /></div>
-            </div>
-            <div style={{...styles.sheetGridRow, marginTop: '15px'}}>
-              <div style={{...styles.sheetInputBox, borderColor: '#ff4757'}}><label style={{...styles.sheetLabel, color: '#ff4757'}}>HP</label><input type="number" style={{...styles.sheetInput, color: '#ff4757', textAlign: 'center'}} value={trainer.currentHP} onChange={e => setTrainer({...trainer, currentHP: e.target.value})} /></div>
-              <div style={{...styles.sheetInputBox, borderColor: '#4bcffa'}}><label style={{...styles.sheetLabel, color: '#4bcffa'}}>WILL</label><input type="number" style={{...styles.sheetInput, color: '#4bcffa', textAlign: 'center'}} value={trainer.currentWill} onChange={e => setTrainer({...trainer, currentWill: e.target.value})} /></div>
-            </div>
+<div style={styles.sheetGridRow}>
+  <div style={styles.sheetInputBox}><label style={styles.sheetLabel}>NOME</label><input style={styles.sheetInput} value={trainer.nome} onChange={e => setTrainer({...trainer, nome: e.target.value})} /></div>
+  <div style={styles.sheetInputBox}><label style={styles.sheetLabel}>RANGO</label><input style={styles.sheetInput} value={trainer.rango} onChange={e => setTrainer({...trainer, rango: e.target.value})} /></div>
+  <div style={styles.sheetInputBox}><label style={styles.sheetLabel}>₽</label><input type="number" style={styles.sheetInput} value={trainer.money} onChange={e => setTrainer({...trainer, money: e.target.value})} /></div>
+</div>
+<div style={{...styles.sheetGridRow, marginTop: '15px'}}>
+  <div style={{...styles.sheetInputBox, borderColor: '#ff4757'}}><label style={{...styles.sheetLabel, color: '#ff4757'}}>HP</label><input type="number" style={{...styles.sheetInput, color: '#ff4757', textAlign: 'center'}} value={trainer.currentHP} onChange={e => setTrainer({...trainer, currentHP: e.target.value})} /></div>
+  <div style={{...styles.sheetInputBox, borderColor: '#4bcffa'}}><label style={{...styles.sheetLabel, color: '#4bcffa'}}>VOLONTÀ</label><input type="number" style={{...styles.sheetInput, color: '#4bcffa', textAlign: 'center'}} value={trainer.currentWill} onChange={e => setTrainer({...trainer, currentWill: e.target.value})} /></div>
+</div>
 
             <div style={{display: 'flex', gap: '20px', marginTop: '20px', flexWrap: 'wrap'}}>
               <div style={{flex: '0.8', display: 'flex', flexDirection: 'column', gap: '10px', minWidth: '150px'}}>
@@ -684,9 +687,26 @@ const styles = {
   physicalSheet: { backgroundColor: '#1e1e1e', padding: '20px', borderRadius: '15px', border: '1px solid #333', boxShadow: '0 10px 30px rgba(0,0,0,0.8)' },
   sheetHeader: { borderBottom: '2px solid #555', paddingBottom: '10px', marginBottom: '15px', textAlign: 'center' },
   sheetGridRow: { display: 'flex', gap: '10px', marginBottom: '10px', flexWrap: 'wrap' },
-  sheetInputBox: { flex: 1, border: '1px solid #444', backgroundColor: '#252525', borderRadius: '8px', padding: '8px 10px', display: 'flex', flexDirection: 'column', minWidth: '120px' },
+  sheetInputBox: { 
+    flex: 1, 
+    border: '1px solid #444', 
+    backgroundColor: '#252525', 
+    borderRadius: '8px', 
+    padding: '8px 10px', 
+    display: 'flex', 
+    flexDirection: 'column', 
+    minWidth: '120px' 
+  },
   sheetLabel: { fontSize: '9px', color: '#888', fontWeight: 'bold' },
-  sheetInput: { background: 'none', border: 'none', color: '#fff', fontSize: '16px', fontWeight: 'bold', outline: 'none', width: '100%' },
+  sheetInput: { 
+    background: '#252525', // Sfondo scuro forzato per leggere il testo bianco
+    border: 'none', 
+    color: '#fff', 
+    fontSize: '16px', 
+    fontWeight: 'bold', 
+    outline: 'none', 
+    width: '100%',
+    borderRadius: '4px' },
   sheetBox: { border: '1px solid #444', borderRadius: '10px', overflow: 'hidden', backgroundColor: '#222' },
   sheetBoxHeader: { backgroundColor: '#ff4757', color: '#fff', fontSize: '11px', fontWeight: 'bold', padding: '6px', textAlign: 'center' },
   sheetAttributeBox: { backgroundColor: '#2a2a2a', border: '1px solid #444', borderRadius: '10px', padding: '10px', textAlign: 'center' },
