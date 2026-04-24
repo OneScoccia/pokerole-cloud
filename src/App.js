@@ -424,38 +424,47 @@ function App() {
   };
 
   const renderImmagine = (tipo, nome, stile) => {
+    // Se non c'è un nome, non mostrare nulla
+    if (!nome) return null;
+
     const cartella = tipo === 'pokemon' ? 'BookSprites' : 'Items';
-    const nomePulito = encodeURIComponent(nome);
+    
+    // Funzione interna per creare l'URL corretto evitando doppi slash
+    const getUrl = (name) => {
+        const path = `${BASE_URL}/data/images/${cartella}/${encodeURIComponent(name)}.png`;
+        return path.replace(/\/+/g, '/');
+    };
 
     return (
       <img 
         key={nome}
-        src={`${BASE_URL}/data/images/${cartella}/${nomePulito}.png`} 
+        src={getUrl(nome)} 
         alt={nome} 
         style={stile} 
         onError={(e) => { 
-          // 1° Tentativo: Prova tutto minuscolo
+          // 1° Tentativo: Tutto minuscolo (comune per molti file su GitHub)
           if (!e.target.dataset.triedLower) {
             e.target.dataset.triedLower = "true";
-            e.target.src = `${BASE_URL}/data/images/${cartella}/${nome.toLowerCase()}.png`;
+            e.target.src = getUrl(nome.toLowerCase());
           } 
-          // 2° Tentativo: Prova senza spazi (es. "Poke Ball" -> "PokeBall")
+          // 2° Tentativo: Senza spazi (es. "Poke Ball" -> "PokeBall")
           else if (!e.target.dataset.triedNoSpace) {
             e.target.dataset.triedNoSpace = "true";
-            e.target.src = `${BASE_URL}/data/images/${cartella}/${nome.replace(/ /g, '')}.png`;
+            e.target.src = getUrl(nome.replace(/\s/g, ''));
           } 
-          // 3° Tentativo: Prova il nome base (prima della parentesi, es. "Toxtricity (Amped Form)" -> "Toxtricity")
+          // 3° Tentativo (Solo PKM): Nome Base (es. "Toxtricity (Amped Form)" -> "Toxtricity")
           else if (!e.target.dataset.triedBase && tipo === 'pokemon') {
             e.target.dataset.triedBase = "true";
             const pkmBase = nome.split(' (')[0];
-            e.target.src = `${BASE_URL}/data/images/${cartella}/${encodeURIComponent(pkmBase)}.png`;
+            e.target.src = getUrl(pkmBase);
           } 
-          // 4° Tentativo: Prova l'estensione maiuscola .PNG
+          // 4° Tentativo: Estensione maiuscola .PNG
           else if (!e.target.dataset.triedCaps) {
             e.target.dataset.triedCaps = "true";
             e.target.src = e.target.src.replace('.png', '.PNG');
           }
           else {
+            // Se fallisce tutto, nascondi l'immagine rotta
             e.target.style.display = 'none'; 
           }
         }} 
@@ -574,15 +583,18 @@ function App() {
                   <button onClick={() => { if(itemSelezionato) { aggiungiZaino(itemSelezionato); setItemSelezionato(""); } }} style={styles.btnCercaMini}> + </button>
                 </div>
                 {zaino.map((item, i) => (
-                  <div key={i} style={styles.sheetItemRow}>
-                    {renderImmagine('item', item.Name, styles.itemImage)}
-                    <div style={{flex:1, marginLeft: 15}}><strong style={{color: '#fff'}}>{item.customName || tItem(item.Name)}</strong></div>
-                    <div style={{display: 'flex', alignItems: 'center', gap: 10}}>
-                      <input type="number" value={item.qty} style={styles.sheetMiniInput} onChange={e => { const val = parseInt(e.target.value) || 0; if (val <= 0) rimuoviDalloZaino(i); else { const n = [...zaino]; n[i].qty = val; setZaino(n); } }}/>
-                      <button onClick={() => rimuoviDalloZaino(i)} style={styles.btnDeletePiccolo}>❌</button>
-                    </div>
-                  </div>
-                ))}
+  <div key={i} style={styles.sheetItemRow}>
+    {/* Questa riga carica l'immagine dell'oggetto */}
+    <div style={styles.imgContainer}>
+      {renderImmagine('item', item.Name, styles.itemImage)}
+    </div>
+    
+    <div style={{flex:1, marginLeft: 15}}>
+      <strong style={{color: '#fff'}}>{item.customName || tItem(item.Name)}</strong>
+    </div>
+    {/* ... resto del codice per quantità e tasto elimina ... */}
+  </div>
+))}
               </div>
             </div>
           </div>
@@ -734,6 +746,7 @@ const styles = {
   sheetMiniInput: { width: '35px', background: '#111', border: '1px solid #555', color: '#fff', textAlign: 'center', borderRadius: '5px', fontSize: '14px', fontWeight: 'bold' },
   sheetItemRow: { backgroundColor: '#1a1a1a', padding: '10px', borderRadius: '10px', border: '1px solid #333', display: 'flex', alignItems: 'center', marginBottom: '8px', flexWrap: 'wrap' },
   itemImage: { width: 40, height: 40, objectFit: 'contain' },
+  imgContainer: {backgroundColor: '#1a1a1a', borderRadius: '8px', padding: '5px', display: 'flex', justifyContent: 'center', alignItems: 'center', width: '50px', height: '50px' },
   sheetMoveCard: { backgroundColor: '#252525', border: '1px solid #444', borderRadius: '10px', padding: '12px' },
   btnCircleMin: { background: 'none', border: '1px solid #ff4757', color: '#ff4757', borderRadius: '50%', width: '25px', height: '25px', cursor: 'pointer' },
   btnCircleMinBlue: { background: 'none', border: '1px solid #4bcffa', color: '#4bcffa', borderRadius: '50%', width: '25px', height: '25px', cursor: 'pointer' },
