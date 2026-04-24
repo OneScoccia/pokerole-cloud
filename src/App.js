@@ -21,6 +21,7 @@ const db = getFirestore(app);
 
 // --- FIX PERCORSO (LOCALE VS ONLINE) ---
 const BASE_URL = window.location.hostname.includes("localhost") ? "" : "/pokerole-cloud";
+const cleanUrl = (path) => path.replace(/\/+/g, '/');
 
 // --- COLORI E DIZIONARI UFFICIALI ---
 const typeColors = {
@@ -344,30 +345,39 @@ function App() {
     const query = ricerca.trim().toLowerCase();
     if (!query) return;
 
-    // Cerca nella lista se esiste il nome esatto o se inizia con quel nome (per Toxtricity ecc)
-    const nomeReale = listaPokemon.find(p => 
-      p.toLowerCase() === query || 
-      p.toLowerCase().startsWith(query + " (")
-    );
+    // 1. Cerchiamo nella lista se esiste il nome esatto o se inizia con quel nome
+    let nomeReale = listaPokemon.find(p => p.toLowerCase() === query);
+    
+    // Se non trova Toxtricity, cerca Toxtricity (Amped Form) o simili
+    if (!nomeReale) {
+      nomeReale = listaPokemon.find(p => p.toLowerCase().startsWith(query + " "));
+    }
 
     if (!nomeReale) {
       alert("Pokémon non trovato. Controlla il nome!");
       return;
     }
 
-    const pkm = await fetchData('Pokedex', nomeReale);
+    // 2. Prova a caricare. Se fallisce (per Toxtricity), prova ad aggiungere "(Amped Form)"
+    let pkm = await fetchData('Pokedex', nomeReale);
+    
+    if (!pkm && nomeReale.toLowerCase() === "toxtricity") {
+      pkm = await fetchData('Pokedex', "Toxtricity (Amped Form)");
+    }
+
     if (pkm) {
       pkm.Moves.forEach(async (m) => {
         const moveData = await fetchData('Moves', m.Name);
         if (moveData) setDettagliMosse(prev => ({ ...prev, [m.Name]: moveData }));
       });
 
-      // Trova tutte le forme basate sul nome base
-      const nomeBase = nomeReale.split(' (')[0];
+      const nomeBase = pkm.Name.split(' (')[0];
       const forme = listaPokemon.filter(p => p === nomeBase || p.startsWith(nomeBase + " ("));
       
-      pkm.availableForms = forme;
+      pkm.availableForms = forme.length > 0 ? forme : [pkm.Name];
       setPkmTrovato(pkm);
+    } else {
+      alert("Errore: il file JSON di questo Pokémon non è stato trovato nella cartella.");
     }
   };
 
@@ -420,19 +430,20 @@ function App() {
 
   const renderImmagine = (tipo, nome, stile) => {
     const cartella = tipo === 'pokemon' ? 'BookSprites' : 'Items';
-    const nomePulito = encodeURIComponent(nome);
+    const percorso = cleanUrl(`${BASE_URL}/data/images/${cartella}/${encodeURIComponent(nome)}.png`);
 
     return (
       <img 
         key={nome}
-        src={`${BASE_URL}/data/images/${cartella}/${nomePulito}.png`} 
-        alt={tNomePkm(nome)} 
+        src={percorso} 
+        alt={nome} 
         style={stile} 
         onError={(e) => { 
+          // Se la forma specifica non esiste, prova il nome base
           if (!e.target.dataset.triedBase && tipo === 'pokemon') {
             e.target.dataset.triedBase = "true";
             const pkmBase = nome.split(' (')[0];
-            e.target.src = `${BASE_URL}/data/images/${cartella}/${encodeURIComponent(pkmBase)}.png`;
+            e.target.src = cleanUrl(`${BASE_URL}/data/images/${cartella}/${encodeURIComponent(pkmBase)}.png`);
           } else {
             e.target.style.display = 'none'; 
           }
