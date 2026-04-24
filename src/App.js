@@ -423,45 +423,30 @@ function App() {
     }
   };
 
-  const renderImmagine = (tipo, nome, stile) => {
-    const cartella = tipo === 'pokemon' ? 'BookSprites' : 'Items';
-    const nomePulito = encodeURIComponent(nome);
+  const renderImmagine = (pkm) => {
+  if (!pkm) return "";
 
-    return (
-      <img 
-        key={nome}
-        src={`${BASE_URL}/data/images/${cartella}/${nomePulito}.png`} 
-        alt={nome} 
-        style={stile} 
-        onError={(e) => { 
-          // 1° Tentativo: Prova tutto minuscolo
-          if (!e.target.dataset.triedLower) {
-            e.target.dataset.triedLower = "true";
-            e.target.src = `${BASE_URL}/data/images/${cartella}/${nome.toLowerCase()}.png`;
-          } 
-          // 2° Tentativo: Prova senza spazi (es. "Poke Ball" -> "PokeBall")
-          else if (!e.target.dataset.triedNoSpace) {
-            e.target.dataset.triedNoSpace = "true";
-            e.target.src = `${BASE_URL}/data/images/${cartella}/${nome.replace(/ /g, '')}.png`;
-          } 
-          // 3° Tentativo: Prova il nome base (prima della parentesi, es. "Toxtricity (Amped Form)" -> "Toxtricity")
-          else if (!e.target.dataset.triedBase && tipo === 'pokemon') {
-            e.target.dataset.triedBase = "true";
-            const pkmBase = nome.split(' (')[0];
-            e.target.src = `${BASE_URL}/data/images/${cartella}/${encodeURIComponent(pkmBase)}.png`;
-          } 
-          // 4° Tentativo: Prova l'estensione maiuscola .PNG
-          else if (!e.target.dataset.triedCaps) {
-            e.target.dataset.triedCaps = "true";
-            e.target.src = e.target.src.replace('.png', '.PNG');
-          }
-          else {
-            e.target.style.display = 'none'; 
-          }
-        }} 
-      />
-    );
-  };
+  // 1. Se il JSON ha già un campo "Sprite", usiamo quello (è la via più sicura)
+  if (pkm.Sprite) {
+    return `${BASE_URL}/data/images/BookSprites/${pkm.Sprite}`;
+  }
+
+  // 2. Altrimenti, costruiamo il nome basandoci su Nome e Variante
+  let nomeFile = pkm.Name;
+
+  if (pkm.Variant && pkm.Variant !== "" && pkm.Variant !== "Normal") {
+    // Trasforma "Mega X" in "Mega-X" e lo aggiunge: "Charizard-Mega-X"
+    const varianteFormattata = pkm.Variant.replace(/\s+/g, '-');
+    nomeFile = `${pkm.Name}-${varianteFormattata}`;
+  }
+
+  // Rimuoviamo eventuali caratteri speciali che potrebbero rompere l'URL
+  // ma manteniamo i trattini necessari per le forme
+  nomeFile = nomeFile.replace(/[pkmn?]/g, ''); 
+
+  return `${BASE_URL}/data/images/BookSprites/${nomeFile}.png`;
+};
+
 
   const renderTrainerSkillGroup = (title, skillsArray) => (
     <div style={styles.sheetBox}>
@@ -575,15 +560,33 @@ function App() {
                   <button onClick={() => { if(itemSelezionato) { aggiungiZaino(itemSelezionato); setItemSelezionato(""); } }} style={styles.btnCercaMini}> + </button>
                 </div>
                 {zaino.map((item, i) => (
-                  <div key={i} style={styles.sheetItemRow}>
-                    {renderImmagine('item', item.Name, styles.itemImage)}
-                    <div style={{flex:1, marginLeft: 15}}><strong style={{color: '#fff'}}>{item.customName || tItem(item.Name)}</strong></div>
-                    <div style={{display: 'flex', alignItems: 'center', gap: 10}}>
-                      <input type="number" value={item.qty} style={styles.sheetMiniInput} onChange={e => { const val = parseInt(e.target.value) || 0; if (val <= 0) rimuoviDalloZaino(i); else { const n = [...zaino]; n[i].qty = val; setZaino(n); } }}/>
-                      <button onClick={() => rimuoviDalloZaino(i)} style={styles.btnDeletePiccolo}>❌</button>
-                    </div>
-                  </div>
-                ))}
+  <div key={i} style={styles.sheetItemRow}>
+    {/* Immagine Oggetto con box dedicato */}
+    <div style={styles.imgContainer}>
+      {renderImmagine('item', item.Name, styles.itemImage)}
+    </div>
+    
+    <div style={{flex: 1, marginLeft: 15}}>
+      <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+        <strong style={{color: '#fff', fontSize: '16px'}}>{item.customName || tItem(item.Name)}</strong>
+        <div style={{display: 'flex', alignItems: 'center', gap: 10}}>
+          <input type="number" value={item.qty} style={styles.sheetMiniInput} onChange={e => { const n = [...zaino]; n[i].qty = parseInt(e.target.value); setZaino(n); }} />
+          <button onClick={() => rimuoviDalloZaino(i)} style={{background: 'none', border: 'none', cursor: 'pointer'}}>❌</button>
+        </div>
+      </div>
+      
+      {/* Testo narrativo */}
+      <div style={{fontSize: '12px', color: '#aaa', fontStyle: 'italic', marginTop: '3px'}}>{item.Description}</div>
+      
+      {/* BOX EFFETTO MECCANICO (Priorità Master) */}
+      {item.Effect && (
+        <div style={styles.effectBox}>
+          <strong>EFFETTO:</strong> {item.Effect}
+        </div>
+      )}
+    </div>
+  </div>
+))}
               </div>
             </div>
           </div>
