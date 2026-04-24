@@ -197,6 +197,7 @@ const tNomePkm = (nome) => {
   return nome.replace('(Mega Form)', '(Mega)')
              .replace('(Mega X Form)', '(Mega X)')
              .replace('(Mega Y Form)', '(Mega Y)')
+             .replace('(Gigantamax Form)', '(Gigamax)')
              .replace('(Alolan Form)', '(Alola)')
              .replace('(Galarian Form)', '(Galar)')
              .replace('(Hisuian Form)', '(Hisui)')
@@ -339,8 +340,12 @@ function App() {
 
   const renderImmagine = (tipo, nome, stile) => {
     if (!nome) return null;
-    const cartella = tipo === 'pokemon' ? 'BookSprites' : 'Items';
-    const getUrl = (n) => cleanUrl(`${BASE_URL}/data/images/${cartella}/${encodeURIComponent(n)}.png`);
+    
+    // 1. Determiniamo la cartella: Gigantamax va in HomeSprites, il resto standard
+    const isGmax = nome.toLowerCase().includes("gigantamax");
+    const cartella = isGmax ? 'HomeSprites' : (tipo === 'pokemon' ? 'BookSprites' : 'Items');
+    
+    const getUrl = (n, folder = cartella) => cleanUrl(`${BASE_URL}/data/images/${folder}/${encodeURIComponent(n)}.png`);
 
     return (
       <img 
@@ -349,21 +354,28 @@ function App() {
         alt={nome} 
         style={stile} 
         onError={(e) => { 
-          if (!e.target.dataset.triedLower) {
+          // PROVA 1: Trattini al posto di spazi e parentesi (Fondamentale per Mega e G-Max su GitHub)
+          if (!e.target.dataset.triedDash) {
+            e.target.dataset.triedDash = "true";
+            const nDash = nome.replace(/\s*\(|\)/g, '').replace(/\s*Form/gi, '').trim().replace(/\s+/g, '-');
+            e.target.src = getUrl(nDash);
+          } 
+          // PROVA 2: Tutto minuscolo
+          else if (!e.target.dataset.triedLower) {
             e.target.dataset.triedLower = "true";
             e.target.src = getUrl(nome.toLowerCase());
-          } else if (!e.target.dataset.triedDash) {
-            e.target.dataset.triedDash = "true";
-            const nomeDash = nome.replace(/[\s()]+/g, '-').replace(/-$/, '').replace(/^-/, '');
-            e.target.src = getUrl(nomeDash);
-          } else if (!e.target.dataset.triedClean) {
+          }
+          // PROVA 3: Senza spazi (per gli oggetti tipo "PokeBall")
+          else if (!e.target.dataset.triedClean) {
             e.target.dataset.triedClean = "true";
-            const nomeClean = nome.replace(/[\s()]+/g, '');
-            e.target.src = getUrl(nomeClean);
-          } else if (!e.target.dataset.triedBase && tipo === 'pokemon') {
+            e.target.src = getUrl(nome.replace(/[\s()]+/g, ''));
+          }
+          // PROVA 4: Nome Base (Fallback)
+          else if (!e.target.dataset.triedBase && tipo === 'pokemon') {
             e.target.dataset.triedBase = "true";
             e.target.src = getUrl(nome.split(' (')[0]);
-          } else { e.target.style.display = 'none'; }
+          } 
+          else { e.target.style.display = 'none'; }
         }} 
       />
     );
@@ -476,9 +488,9 @@ function App() {
   return (
     <div style={styles.container}>
       <div style={styles.navbar}>
-        <button onClick={() => setTab("trainer")} style={tab === "trainer" ? styles.navActive : styles.navBtn}>👤 TRAINER</button>
+        <button onClick={() => setTab("trainer")} style={tab === "trainer" ? styles.navActive : styles.navBtn}>👤 ALLENATORE</button>
         <button onClick={() => setTab("squadra")} style={tab === "squadra" ? styles.navActive : styles.navBtn}>🎒 TEAM ({squadra.length})</button>
-        <button onClick={() => setTab("pokedex")} style={tab === "pokedex" ? styles.navActive : styles.navBtn}>🔍 DEX</button>
+        <button onClick={() => setTab("pokedex")} style={tab === "pokedex" ? styles.navActive : styles.navBtn}>🔍 POKEDEX</button>
         <div style={{flex: 1, display: 'flex', justifyContent: 'flex-end', padding: '10px', gap: '10px'}}>
           <button onClick={salvaSulCloud} style={{...styles.btnCloud}}>☁️ SALVA</button>
           <button onClick={() => signOut(auth)} style={{...styles.btnExit}}>ESCI</button>
@@ -525,21 +537,33 @@ function App() {
                   <button onClick={() => { aggiungiZaino(itemSelezionato); setItemSelezionato(""); }} style={styles.btnCercaMini}> + </button>
                 </div>
                 {zaino.map((item, i) => (
-                  <div key={i} style={styles.sheetItemRow}>
-                    <div style={styles.imgContainer}>{renderImmagine('item', item.Name, styles.itemImage)}</div>
-                    <div style={{flex: 1, marginLeft: 15}}>
-                      <div style={{display: 'flex', justifyContent: 'space-between'}}>
-                        <strong style={{color: '#fff'}}>{item.customName || tItem(item.Name)}</strong>
-                        <div style={{display: 'flex', gap: 10}}>
-                          <input type="number" value={item.qty} style={styles.sheetMiniInput} onChange={e => { const n = [...zaino]; n[i].qty = parseInt(e.target.value); setZaino(n); }} />
-                          <button onClick={() => rimuoviDalloZaino(i)} style={{background: 'none', border: 'none', cursor: 'pointer'}}>❌</button>
-                        </div>
-                      </div>
-                      <div style={{fontSize: '12px', color: '#aaa', fontStyle: 'italic'}}>{item.Description}</div>
-                      {item.Effect && <div style={styles.effectBox}><strong>EFFETTO:</strong> {item.Effect}</div>}
-                    </div>
-                  </div>
-                ))}
+  <div key={i} style={styles.sheetItemRow}>
+    {/* Box Immagine Oggetto */}
+    <div style={styles.imgContainer}>
+      {renderImmagine('item', item.Name, styles.itemImage)}
+    </div>
+    
+    <div style={{flex: 1, marginLeft: 15}}>
+      <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+        <strong style={{color: '#fff', fontSize: '16px'}}>{item.customName || tItem(item.Name)}</strong>
+        <div style={{display: 'flex', alignItems: 'center', gap: 10}}>
+          <input type="number" value={item.qty} style={styles.sheetMiniInput} onChange={e => { const n = [...zaino]; n[i].qty = parseInt(e.target.value); setZaino(n); }} />
+          <button onClick={() => rimuoviDalloZaino(i)} style={{background: 'none', border: 'none', cursor: 'pointer'}}>❌</button>
+        </div>
+      </div>
+      
+      {/* Descrizione */}
+      <div style={{fontSize: '12px', color: '#aaa', fontStyle: 'italic', marginTop: '3px'}}>{item.Description}</div>
+      
+      {/* EFFETTO MECCANICO (PRIORITÀ MASTER) */}
+      {item.Effect && (
+        <div style={styles.effectBox}>
+          <strong>EFFETTO:</strong> {item.Effect}
+        </div>
+      )}
+    </div>
+  </div>
+))}
               </div>
             </div>
           </div>
@@ -671,10 +695,41 @@ const styles = {
   sheetSkillRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 10px', borderBottom: '1px solid #333', cursor: 'pointer' },
   sheetMiniInput: { width: '35px', background: '#111', border: '1px solid #555', color: '#fff', textAlign: 'center', borderRadius: '5px' },
   sheetItemRow: { backgroundColor: '#1a1a1a', padding: '10px', borderRadius: '10px', border: '1px solid #333', display: 'flex', alignItems: 'center', marginBottom: '8px' },
-  imgContainer: { width: '60px', height: '60px', backgroundColor: '#111', borderRadius: '12px', display: 'flex', justifyContent: 'center', alignItems: 'center', border: '1px solid #444', flexShrink: 0 },
-  imgContainerBig: { width: '120px', height: '120px', backgroundColor: '#111', borderRadius: '15px', display: 'flex', justifyContent: 'center', alignItems: 'center', border: '1px solid #444' },
-  itemImage: { width: '50px', height: '50px', objectFit: 'contain' },
-  effectBox: { fontSize: '12px', color: '#2ed573', marginTop: '6px', padding: '6px', backgroundColor: 'rgba(46, 213, 115, 0.1)', borderRadius: '5px', borderLeft: '3px solid #2ed573' },
+imgContainer: { 
+    width: '60px', 
+    height: '60px', 
+    backgroundColor: '#111', 
+    borderRadius: '12px', 
+    display: 'flex', 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    border: '1px solid #444', 
+    flexShrink: 0 
+  },  
+imgContainerBig: { 
+    width: '120px', 
+    height: '120px', 
+    backgroundColor: '#111', 
+    borderRadius: '15px', 
+    display: 'flex', 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    border: '1px solid #444' 
+  },
+itemImage: { 
+    width: '45px', 
+    height: '45px', 
+    objectFit: 'contain' 
+  },
+effectBox: { 
+    fontSize: '12px', 
+    color: '#2ed573', 
+    marginTop: '8px', 
+    padding: '8px', 
+    backgroundColor: 'rgba(46, 213, 115, 0.1)', 
+    borderRadius: '6px', 
+    borderLeft: '4px solid #2ed573' 
+  },
   sheetMoveCard: { backgroundColor: '#252525', border: '1px solid #444', borderRadius: '10px', padding: '12px' },
   btnDelPkm: { background: 'none', border: '1px solid #ff4757', color: '#ff4757', padding: '10px', borderRadius: '10px', cursor: 'pointer', width: '100%', marginTop: '10px' },
   bigSearch: { width: '100%', padding: '15px', borderRadius: '15px', border: 'none', backgroundColor: '#1f1f1f', color: '#fff', fontSize: '18px' },
