@@ -19,6 +19,9 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
+// --- FIX PERCORSO (LOCALE VS ONLINE) ---
+const BASE_URL = window.location.hostname.includes("localhost") ? "" : "/pokerole-cloud";
+
 // --- COLORI E DIZIONARI UFFICIALI ---
 const typeColors = {
   Normal: '#A8A77A', Fire: '#EE8130', Water: '#6390F0', Electric: '#F7D02C',
@@ -181,41 +184,7 @@ const tradMosseEngToIta = {
   "Overheat": "Vampata", "Odor Sleuth": "Segugio", "Rock Tomb": "Rocciotomba", "Silver Wind": "Ventargenteo", 
   "Metal Sound": "Ferrostrido", "Grass Whistle": "Meloderba", "Tickle": "Solletico", "Cosmic Power": "Cosmoforza", 
   "Water Spout": "Zampillo", "Signal Beam": "Segnoraggio", "Shadow Punch": "Pugnombra", "Extrasensory": "Extrasenso", 
-  "Sky Uppercut": "Stramontante", "Sand Tomb": "Sabbiotomba", "Sheer Cold": "Purogelo", "Muddy Water": "Fanghiglia", 
-  "Bullet Seed": "Semitraglia", "Aerial Ace": "Aeroassalto", "Icicle Spear": "Gelolancia", "Iron Defense": "Ferroscudo", 
-  "Block": "Blocco", "Howl": "Gridodilotta", "Dragon Claw": "Dragartigli", "Frenzy Plant": "Radicalbero", 
-  "Bulk Up": "Granfisico", "Bounce": "Rimbalzo", "Mud Shot": "Colpodifango", "Poison Tail": "Velenocoda", 
-  "Covet": "Supplica", "Volt Tackle": "Locomovolt", "Magical Leaf": "Fogliamagica", "Water Sport": "Docciascudo", 
-  "Calm Mind": "Calmamente", "Leaf Blade": "Fendifoglia", "Dragon Dance": "Dragodanza", "Rock Blast": "Cadutamassi", 
-  "Shock Wave": "Ondashock", "Water Pulse": "Idropulsar", "Doom Desire": "Obblididerio", "Psycho Boost": "Psicoslancio", 
-  "Roost": "Trespolo", "Gravity": "Gravità", "Miracle Eye": "Miracolvista", "Wake-Up Slap": "Svegliapacca", 
-  "Hammer Arm": "Martelpugno", "Gyro Ball": "Vortispalla", "Healing Wish": "Curardore", "Brine": "Acquadisale", 
-  "Natural Gift": "Dononaturale", "Feint": "Fintoattacco", "Pluck": "Spennata", "Tailwind": "Ventoincoda", 
-  "Acupressure": "Acupressione", "Metal Burst": "Metalscoppio", "U-turn": "Retromarcia", "Close Combat": "Zuffa", 
-  "Payback": "Rivincita", "Assurance": "Garanzia", "Embargo": "Divieto", "Fling": "Lancio", "Psycho Shift": "Psicotrasfer", 
-  "Trump Card": "Asso", "Heal Block": "Anticura", "Wring Out": "Strizzata", "Power Trick": "Ingannoforza", 
-  "Gastro Acid": "Gastroacido", "Lucky Chant": "Fortuncanto", "Me First": "Precedenza", "Copycat": "Falsariga", 
-  "Power Swap": "Barattoforza", "Guard Swap": "Barattoscudo", "Punishment": "Punizione", "Last Resort": "Ultimascelta", 
-  "Worry Seed": "Affannoseme", "Sucker Punch": "Sbigoattacco", "Toxic Spikes": "Fielepunte", "Heart Swap": "Cuorbaratto", 
-  "Aqua Ring": "Acquanello", "Magnet Rise": "Magnetascesa", "Flare Blitz": "Fuococarica", "Force Palm": "Palmoforza", 
-  "Aura Sphere": "Forzasfera", "Rock Polish": "Lucidatura", "Poison Jab": "Velenpuntura", "Dark Pulse": "Neropulsar", 
-  "Night Slash": "Nottesferza", "Aqua Tail": "Idrocoda", "Seed Bomb": "Semebomba", "Air Slash": "Eterelama", 
-  "X-Scissor": "Forbice X", "Bug Buzz": "Ronzio", "Dragon Pulse": "Dragopulsar", "Dragon Rush": "Dragofuria", 
-  "Power Gem": "Gemmoforza", "Drain Punch": "Assorbipugno", "Vacuum Wave": "Vuotonda", "Focus Blast": "Focalcolpo", 
-  "Energy Ball": "Energipalla", "Brave Bird": "Baldeali", "Earth Power": "Geoforza", "Switcheroo": "Rapidscambio", 
-  "Giga Impact": "Gigaimpatto", "Nasty Plot": "Congiura", "Bullet Punch": "Pugnoscarica", "Avalanche": "Slavina", 
-  "Ice Shard": "Geloscheggia", "Shadow Claw": "Ombrartigli", "Thunder Fang": "Fulmindenti", "Ice Fang": "Gelodenti", 
-  "Fire Fang": "Rogodenti", "Shadow Sneak": "Furtivombra", "Mud Bomb": "Fangobomba", "Psycho Cut": "Psicotaglio", 
-  "Zen Headbutt": "Cozzata Zen", "Mirror Shot": "Cristalcolpo", "Flash Cannon": "Cannonflash", "Rock Climb": "Rocciascale", 
-  "Defog": "Scacciabruma", "Trick Room": "Distortozona", "Draco Meteor": "Dragobolide", "Discharge": "Scarica", 
-  "Lava Plume": "Lavasbuffo", "Leaf Storm": "Verdebufera", "Power Whip": "Vigorcolpo", "Rock Wrecker": "Devastomasso", 
-  "Cross Poison": "Velenocroce", "Gunk Shot": "Sporcolancio", "Iron Head": "Metaltestata", "Magnet Bomb": "Magnetebomba", 
-  "Stone Edge": "Pietrataglio", "Captivate": "Incanto", "Stealth Rock": "Levitoroccia", "Grass Knot": "Laccioerboso", 
-  "Chatter": "Schiamazzo", "Judgment": "Giudizio", "Bug Bite": "Entomorso", "Charge Beam": "Raggioscossa", 
-  "Wood Hammer": "Mazzilegno", "Aqua Jet": "Acquagetto", "Attack Order": "Comando Attacco", "Defend Order": "Comando Scudo", 
-  "Heal Order": "Comando Cura", "Head Smash": "Zuccata", "Double Hit": "Doppiosmash", "Roar of Time": "Fragortempo", 
-  "Spacial Rend": "Fendispazio", "Lunar Dance": "Lunadanza", "Crush Grip": "Sbriciolmano", "Magma Storm": "Magmaclisma", 
-  "Dark Void": "Vuototetro", "Seed Flare": "Infuriaseme", "Ominous Wind": "Funestovento", "Shadow Force": "Oscurotuffo"
+  "Sky Uppercut": "Stramontante", "Shadow Force": "Oscurotuffo"
 };
 
 const tradStrumentiItaToEng = Object.fromEntries(Object.entries(tradStrumentiEngToIta).map(([eng, ita]) => [ita, eng]));
@@ -352,7 +321,8 @@ function App() {
 
   const fetchData = async (folder, name) => {
     try {
-      const res = await fetch(`/data/${folder}/${name}.json`);
+      const nomePulito = encodeURIComponent(name);
+      const res = await fetch(`${BASE_URL}/data/${folder}/${nomePulito}.json`);
       if (!res.ok) return null;
       return await res.json();
     } catch (e) { return null; }
@@ -374,8 +344,8 @@ function App() {
     const suffissi = [' (Mega Form)', ' (Mega X Form)', ' (Mega Y Form)', ' (Gigantamax Form)', ' (Alolan Form)', ' (Galarian Form)'];
     for (let suf of suffissi) {
       try {
-        const res = await fetch(`/data/Pokedex/${nomeBase}${suf}.json`);
-        if (res.ok) formeTrovate.push(`${nomeBase}${suf}`);
+        const res = await fetch(`${BASE_URL}/data/Pokedex/${encodeURIComponent(nomeBase + suf)}.json`);
+        if (res.ok) formeTrovate.push(`${nomeBase + suf}`);
       } catch (e) { }
     }
     return formeTrovate;
@@ -444,24 +414,25 @@ function App() {
 
   const renderImmagine = (tipo, nome, stile) => {
     const cartella = tipo === 'pokemon' ? 'BookSprites' : 'Items';
-    const nomePulito = nome.split(' (')[0]; 
+    const nomePulito = encodeURIComponent(nome);
 
     return (
       <img 
         key={nome}
-        src={`/data/images/${cartella}/${nome}.png`} 
+        src={`${BASE_URL}/data/images/${cartella}/${nomePulito}.png`} 
         alt={tNomePkm(nome)} 
         style={stile} 
         onError={(e) => { 
           if (!e.target.dataset.triedLower) {
             e.target.dataset.triedLower = "true";
-            e.target.src = `/data/images/${cartella}/${nome.toLowerCase()}.png`;
+            e.target.src = `${BASE_URL}/data/images/${cartella}/${nome.toLowerCase()}.png`;
           } else if (!e.target.dataset.triedNoSpace) {
             e.target.dataset.triedNoSpace = "true";
-            e.target.src = `/data/images/${cartella}/${nome.replace(/ /g, '')}.png`;
+            e.target.src = `${BASE_URL}/data/images/${cartella}/${nome.replace(/ /g, '')}.png`;
           } else if (!e.target.dataset.triedBase && tipo === 'pokemon') {
             e.target.dataset.triedBase = "true";
-            e.target.src = `/data/images/${cartella}/${nomePulito}.png`;
+            const nomeSoloPkm = nome.split(' (')[0];
+            e.target.src = `${BASE_URL}/data/images/${cartella}/${nomeSoloPkm}.png`;
           } else {
             e.target.style.display = 'none'; 
           }
@@ -498,7 +469,7 @@ function App() {
     </div>
   );
 
-  // --- RENDER DELLA SCHERMATA DI ACCESSO SE NON LOGGATO ---
+  // --- RENDER LOGIN ---
   if (!user) {
     return (
       <div style={{...styles.container, display: 'flex', justifyContent: 'center', alignItems: 'center'}}>
@@ -533,7 +504,6 @@ function App() {
 
   return (
     <div style={styles.container}>
-      {/* NAVBAR */}
       <div style={styles.navbar}>
         <button onClick={() => setTab("trainer")} style={tab === "trainer" ? styles.navActive : styles.navBtn}>👤 ALLENATORE</button>
         <button onClick={() => setTab("squadra")} style={tab === "squadra" ? styles.navActive : styles.navBtn}>🎒 SQUADRA ({squadra.length})</button>
@@ -545,11 +515,8 @@ function App() {
       </div>
 
       <div style={styles.mainContent}>
-        
-        {/* --- SCHEDA ALLENATORE --- */}
         {tab === "trainer" && (
           <div style={styles.physicalSheet}>
-            
             <div style={styles.sheetHeader}>
               <h1 style={{margin: 0, fontSize: '28px', letterSpacing: '2px'}}>SCHEDA DELL'ALLENATORE</h1>
               <h3 style={{margin: '5px 0 0 0', fontSize: '14px', color: '#aaa', fontWeight: 'normal'}}>LEGA POKÉMON • LICENZA DA ALLENATORE</h3>
@@ -599,8 +566,8 @@ function App() {
               </div>
             </div>
 
-            <div style={{display: 'flex', gap: '20px', marginTop: '20px'}}>
-              <div style={{flex: '0.8', display: 'flex', flexDirection: 'column', gap: '10px'}}>
+            <div style={{display: 'flex', gap: '20px', marginTop: '20px', flexWrap: 'wrap'}}>
+              <div style={{flex: '0.8', display: 'flex', flexDirection: 'column', gap: '10px', minWidth: '150px'}}>
                 <div style={{...styles.sheetBoxHeader, backgroundColor: '#444'}}>ATTRIBUTI</div>
                 {Object.entries(trainer.stats).map(([k, v]) => (
                   <div key={k} style={styles.sheetAttributeBox}>
@@ -609,7 +576,7 @@ function App() {
                   </div>
                 ))}
               </div>
-              <div style={{flex: '2', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px'}}>
+              <div style={{flex: '2', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '15px'}}>
                 {renderTrainerSkillGroup("COMBATTIMENTO", ['Brawl', 'Throw', 'Evasion', 'Weapons'])}
                 {renderTrainerSkillGroup("SOPRAVVIVENZA", ['Alert', 'Athletic', 'Nature', 'Stealth', 'Survival'])}
                 {renderTrainerSkillGroup("SOCIALI", ['Allure', 'Etiquette', 'Intimidate', 'Perform'])}
@@ -620,7 +587,7 @@ function App() {
             <div style={{marginTop: '25px', ...styles.sheetBox}}>
               <div style={styles.sheetBoxHeader}>INVENTARIO & STRUMENTI</div>
               <div style={{padding: '15px'}}>
-                <div style={{display:'flex', gap: 10, marginBottom: 15}}>
+                <div style={{display:'flex', gap: 10, marginBottom: 15, flexWrap: 'wrap'}}>
                   <input list="strumenti-disponibili" style={styles.searchBar} value={itemSelezionato} onChange={(e) => setItemSelezionato(e.target.value)} placeholder="Seleziona o scrivi Strumento..." />
                   <datalist id="strumenti-disponibili">
                     {listaStrumenti.map(item => <option key={item} value={item} />)}
@@ -636,10 +603,6 @@ function App() {
                         <strong style={{fontSize: 18, color: '#fff'}}>{nomeItemDisplay}</strong>
                         <div style={{fontSize: 13, color: '#aaa', marginTop: 3}}>
                           <div style={{fontStyle: 'italic'}}>{item.Description}</div>
-                          {Object.entries(item).map(([key, val]) => {
-                            if (['Name', 'customName', 'Description', 'Image', 'qty', '_id'].includes(key)) return null;
-                            return <span key={key} style={{color: '#f1c40f', marginRight: 10, fontSize: 12}}>• {key}: {val}</span>;
-                          })}
                         </div>
                       </div>
                       <div style={{display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5}}>
@@ -651,26 +614,23 @@ function App() {
                 })}
               </div>
             </div>
-
           </div>
         )}
 
-        {/* --- SCHEDA SQUADRA POKEMON --- */}
         {tab === "squadra" && (
           <div style={styles.squadraContainer}>
             {squadra.map(p => (
               <div key={p.id} style={{...styles.physicalSheet, marginBottom: '40px', borderLeft: '8px solid #ff4757'}}>
-                
                 <div style={styles.sheetHeader}>
                   <h1 style={{margin: 0, fontSize: '28px', letterSpacing: '2px'}}>SCHEDA DEL POKÉMON</h1>
                 </div>
 
-                <div style={{ display: 'flex', gap: '20px', marginBottom: '20px' }}>
-                  <div style={{ flex: '0 0 140px', textAlign: 'center', backgroundColor: '#222', borderRadius: '15px', padding: '10px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                <div style={{ display: 'flex', gap: '20px', marginBottom: '20px', flexWrap: 'wrap' }}>
+                  <div style={{ flex: '0 0 140px', textAlign: 'center', backgroundColor: '#222', borderRadius: '15px', padding: '10px', display: 'flex', justifyContent: 'center', alignItems: 'center', margin: '0 auto' }}>
                     {renderImmagine('pokemon', p.currentForm, { width: '120px', height: '120px', objectFit: 'contain' })}
                   </div>
                   
-                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '10px', minWidth: '250px' }}>
                     <div style={styles.sheetGridRow}>
                       <div style={{...styles.sheetInputBox, flex: 2}}>
                         <label style={styles.sheetLabel}>NOME / SPECIE</label>
@@ -688,7 +648,7 @@ function App() {
                     
                     <div style={styles.sheetGridRow}>
                       <div style={{...styles.sheetInputBox, backgroundColor: '#2d1b1b', borderColor: '#ff4757'}}>
-                        <label style={{...styles.sheetLabel, color: '#ff4757'}}>PS (PUNTI SALUTE)</label>
+                        <label style={{...styles.sheetLabel, color: '#ff4757'}}>PS</label>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '15px' }}>
                           <button onClick={() => setSquadra(squadra.map(x => x.id === p.id ? {...x, curHP: x.curHP-1} : x))} style={styles.btnCircleMin}>-</button>
                           <span style={{ fontSize: '22px', color: '#ff4757', fontWeight: 'bold' }}>{p.curHP} / {p.Vitality}</span>
@@ -704,7 +664,7 @@ function App() {
                         </div>
                       </div>
                     </div>
-                    
+
                     <div style={styles.sheetGridRow}>
                       <div style={{...styles.sheetInputBox, flex: 1.5}}>
                         <label style={styles.sheetLabel}>STRUMENTO TENUTO</label>
@@ -739,8 +699,8 @@ function App() {
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', gap: '20px', marginTop: '20px' }}>
-                  <div style={{ flex: '0.8', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <div style={{ display: 'flex', gap: '20px', marginTop: '20px', flexWrap: 'wrap' }}>
+                  <div style={{ flex: '0.8', display: 'flex', flexDirection: 'column', gap: '10px', minWidth: '150px' }}>
                     <div style={{...styles.sheetBoxHeader, backgroundColor: '#444'}}>ATTRIBUTI</div>
                     {['Strength', 'Dexterity', 'Vitality', 'Special', 'Insight'].map(s => (
                       <div key={s} style={styles.sheetAttributeBox}>
@@ -750,7 +710,7 @@ function App() {
                     ))}
                   </div>
 
-                  <div style={{ flex: '2', display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '15px' }}>
+                  <div style={{ flex: '2', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '15px' }}>
                     {renderPkmSkillGroup("LOTTA", ['Brawl', 'Channel', 'Clash', 'Evasion'], p)}
                     {renderPkmSkillGroup("SOPRAVVIVENZA", ['Alert', 'Athletic', 'Nature', 'Stealth'], p)}
                     {renderPkmSkillGroup("SOCIALE", ['Allure', 'Etiquette', 'Intimidate', 'Perform'], p)}
@@ -759,12 +719,11 @@ function App() {
 
                 <div style={{ marginTop: '25px', ...styles.sheetBox }}>
                   <div style={styles.sheetBoxHeader}>MOSSE</div>
-                  <div style={{ padding: '15px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+                  <div style={{ padding: '15px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '15px' }}>
                     {[0, 1, 2, 3].map(i => {
                       const mossaNome = p.selectedMoves[i];
                       const info = dettagliMosse[mossaNome];
                       let baseStat = 0, nomeStat = "", accVal = 0, dmgVal = "-";
-
                       if (info) {
                         if (info.Category === "Special") { baseStat = p.Special; nomeStat = "SPE"; }
                         else if (info.Category === "Physical") { baseStat = p.Strength; nomeStat = "FOR"; }
@@ -772,10 +731,8 @@ function App() {
                         accVal = parseInt(info.Accuracy) || 0;
                         if (info.Power || info.Damage) dmgVal = parseInt(info.Power || info.Damage) || 0;
                       }
-
                       const dadiPrecisione = baseStat + trainer.skills.Command + accVal;
                       const totaleDanno = dmgVal !== "-" ? (baseStat + dmgVal) : "-";
-
                       return (
                         <div key={i} style={styles.sheetMoveCard}>
                           <select style={{...styles.sheetInput, backgroundColor: '#111', padding: '10px', borderRadius: '5px', marginBottom: '10px'}} value={mossaNome} onChange={(e) => {
@@ -785,21 +742,18 @@ function App() {
                             <option value="">-- Seleziona Mossa --</option>
                             {p.Moves.map(m => <option key={m.Name} value={m.Name}>{tMossa(m.Name)}</option>)}
                           </select>
-                          
                           {info && (
                             <div style={{borderTop: `3px solid ${typeColors[info.Type] || '#fff'}`, paddingTop: '10px', display: 'flex', flexDirection: 'column'}}>
                               <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '8px'}}>
                                 <span style={{fontSize: 14, color: typeColors[info.Type] || '#fff', fontWeight: 'bold', textTransform: 'uppercase'}}>{tradTipi[info.Type] || info.Type}</span>
                                 <span style={{fontSize: 12, color: '#aaa'}}>{tCatMosse(info.Category)}</span>
                               </div>
-                              
                               <div style={{display: 'flex', gap: '10px', backgroundColor: '#1a1a1a', padding: '8px', borderRadius: '8px'}}>
                                 <div style={{flex: 1, textAlign: 'center'}}>
                                   <div style={{fontSize: '10px', color: '#888'}}>PRECISIONE</div>
                                   <div style={{fontSize: '18px', fontWeight: 'bold', color: '#4bcffa', cursor: 'pointer'}} onClick={() => tiraDadi(dadiPrecisione, tMossa(mossaNome))}>
                                     🎲 {dadiPrecisione}
                                   </div>
-                                  <div style={{fontSize: '9px', color: '#666', marginTop: '2px'}}>{nomeStat} + CMD + ACC</div>
                                 </div>
                                 <div style={{width: '1px', backgroundColor: '#333'}}></div>
                                 <div style={{flex: 1, textAlign: 'center'}}>
@@ -807,7 +761,6 @@ function App() {
                                   <div style={{fontSize: '18px', fontWeight: 'bold', color: '#ff4757'}}>{totaleDanno}</div>
                                 </div>
                               </div>
-                              
                               <div style={{fontSize: '12px', color: '#ccc', marginTop: '10px', fontStyle: 'italic', lineHeight: '1.4'}}>
                                 {info.Effect || info.Description}
                               </div>
@@ -822,13 +775,11 @@ function App() {
                 <div style={{textAlign: 'right', marginTop: '20px'}}>
                   <button onClick={() => setSquadra(squadra.filter(x => x.id !== p.id))} style={styles.btnDelPkm}>RIMUOVI DALLA SQUADRA</button>
                 </div>
-
               </div>
             ))}
           </div>
         )}
 
-        {/* --- POKEDEX --- */}
         {tab === "pokedex" && (
           <div style={{textAlign:'center'}}>
             <input list="pokemon-disponibili" style={styles.bigSearch} value={ricerca} onChange={e => setRicerca(e.target.value)} placeholder="Seleziona o scrivi nome Pokémon..." />
@@ -859,15 +810,15 @@ function App() {
 // --- STILI CSS ---
 const styles = {
   container: { backgroundColor: '#121212', minHeight: '100vh', color: '#eee', fontFamily: 'sans-serif', paddingBottom: 50 },
-  navbar: { display: 'flex', backgroundColor: '#1f1f1f', position: 'sticky', top: 0, zIndex: 100, boxShadow: '0 4px 15px rgba(0,0,0,0.5)' },
-  navBtn: { flex: 1, padding: '20px', border: 'none', background: 'none', color: '#888', fontWeight: 'bold', fontSize: '15px', cursor: 'pointer' },
-  navActive: { flex: 1, padding: '20px', border: 'none', background: 'none', color: '#ff4757', borderBottom: '5px solid #ff4757', fontWeight: 'bold', fontSize: '15px' },
+  navbar: { display: 'flex', backgroundColor: '#1f1f1f', position: 'sticky', top: 0, zIndex: 100, boxShadow: '0 4px 15px rgba(0,0,0,0.5)', flexWrap: 'wrap' },
+  navBtn: { flex: 1, padding: '20px', border: 'none', background: 'none', color: '#888', fontWeight: 'bold', fontSize: '15px', cursor: 'pointer', minWidth: '100px' },
+  navActive: { flex: 1, padding: '20px', border: 'none', background: 'none', color: '#ff4757', borderBottom: '5px solid #ff4757', fontWeight: 'bold', fontSize: '15px', minWidth: '100px' },
   mainContent: { padding: '20px', maxWidth: '850px', margin: '0 auto' },
   
   physicalSheet: { backgroundColor: '#1e1e1e', padding: '25px', borderRadius: '15px', border: '1px solid #333', boxShadow: '0 10px 30px rgba(0,0,0,0.8)' },
   sheetHeader: { borderBottom: '2px solid #555', paddingBottom: '15px', marginBottom: '20px', textAlign: 'center' },
-  sheetGridRow: { display: 'flex', gap: '10px', marginBottom: '10px' },
-  sheetInputBox: { flex: 1, border: '1px solid #444', backgroundColor: '#252525', borderRadius: '8px', padding: '8px 12px', display: 'flex', flexDirection: 'column' },
+  sheetGridRow: { display: 'flex', gap: '10px', marginBottom: '10px', flexWrap: 'wrap' },
+  sheetInputBox: { flex: 1, border: '1px solid #444', backgroundColor: '#252525', borderRadius: '8px', padding: '8px 12px', display: 'flex', flexDirection: 'column', minWidth: '140px' },
   sheetLabel: { fontSize: '10px', color: '#888', fontWeight: 'bold', marginBottom: '4px', textTransform: 'uppercase' },
   sheetInput: { background: 'none', border: 'none', color: '#fff', fontSize: '16px', fontWeight: 'bold', width: '100%', outline: 'none' },
   
@@ -881,7 +832,7 @@ const styles = {
   sheetSkillRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px', borderBottom: '1px solid #333', cursor: 'pointer' },
   sheetMiniInput: { width: '40px', background: '#111', border: '1px solid #555', color: '#fff', textAlign: 'center', borderRadius: '5px', fontSize: '16px', padding: '4px', fontWeight: 'bold' },
   
-  sheetItemRow: { backgroundColor: '#1a1a1a', padding: '12px', borderRadius: '10px', border: '1px solid #333', display: 'flex', alignItems: 'center', marginBottom: '10px' },
+  sheetItemRow: { backgroundColor: '#1a1a1a', padding: '12px', borderRadius: '10px', border: '1px solid #333', display: 'flex', alignItems: 'center', marginBottom: '10px', flexWrap: 'wrap' },
   sheetMoveCard: { backgroundColor: '#252525', border: '1px solid #444', borderRadius: '10px', padding: '15px' },
 
   btnCircleMin: { background: 'none', border: '1px solid #ff4757', color: '#ff4757', borderRadius: '50%', width: '30px', height: '30px', fontSize: '20px', cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center' },
@@ -889,14 +840,14 @@ const styles = {
   btnDelPkm: { background: 'transparent', border: '1px solid #ff4757', color: '#ff4757', padding: '10px 20px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' },
 
   card: { backgroundColor: '#1f1f1f', padding: '25px', borderRadius: '25px', marginBottom: '25px' },
-  searchBar: { flex: 1, padding: '15px', borderRadius: '10px', border: '1px solid #444', backgroundColor: '#1a1a1a', color: '#fff', fontSize: '16px' },
-  btnCercaMini: { backgroundColor: '#ff4757', color: '#fff', border: 'none', borderRadius: '10px', padding: '0 25px', fontWeight: 'bold', cursor: 'pointer' },
+  searchBar: { flex: 1, padding: '15px', borderRadius: '10px', border: '1px solid #444', backgroundColor: '#1a1a1a', color: '#fff', fontSize: '16px', minWidth: '200px' },
+  btnCercaMini: { backgroundColor: '#ff4757', color: '#fff', border: 'none', borderRadius: '10px', padding: '10px 25px', fontWeight: 'bold', cursor: 'pointer' },
   itemImage: { width: 50, height: 50, objectFit: 'contain', backgroundColor: '#111', borderRadius: 8, padding: 5 },
   imgContainer: { backgroundColor: '#2d2d2d', borderRadius: '20px', padding: 10, display: 'flex', justifyContent: 'center', alignItems: 'center' },
   typeBadge: { padding: '6px 12px', borderRadius: '10px', fontSize: '12px', color: '#fff', fontWeight: 'bold', textShadow: '1px 1px 2px rgba(0,0,0,0.8)', display: 'inline-block' },
   statusBtn: { padding: '8px 12px', borderRadius: '10px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer', color: '#fff', border: 'none' },
   bigSearch: { width: '100%', padding: '20px', borderRadius: '20px', border: 'none', backgroundColor: '#1f1f1f', color: '#fff', fontSize: '20px', marginBottom: 20 },
-  btnCerca: { backgroundColor: '#ff4757', color: '#fff', padding: '18px 30px', borderRadius: '40px', border: 'none', fontWeight: 'bold', width: '100%', fontSize: 16 },
+  btnCerca: { backgroundColor: '#ff4757', color: '#fff', padding: '18px 30px', borderRadius: '40px', border: 'none', fontWeight: 'bold', width: '100%', fontSize: 16, cursor: 'pointer' },
   btnSuccess: { backgroundColor: '#2ed573', color: '#fff', padding: '20px', borderRadius: '20px', border: 'none', fontWeight: 'bold', width: '100%', marginTop: '20px', fontSize: 18, cursor: 'pointer' },
   btnDeletePiccolo: { background: 'none', border: 'none', fontSize: '12px', cursor: 'pointer', marginTop: '5px' }
 };
