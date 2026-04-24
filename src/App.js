@@ -424,16 +424,11 @@ function App() {
   };
 
   const renderImmagine = (tipo, nome, stile) => {
-    // Se non c'è un nome, non mostrare nulla
     if (!nome) return null;
-
     const cartella = tipo === 'pokemon' ? 'BookSprites' : 'Items';
     
-    // Funzione interna per creare l'URL corretto evitando doppi slash
-    const getUrl = (name) => {
-        const path = `${BASE_URL}/data/images/${cartella}/${encodeURIComponent(name)}.png`;
-        return path.replace(/\/+/g, '/');
-    };
+    // Funzione per generare l'URL pulito
+    const getUrl = (n) => `${BASE_URL}/data/images/${cartella}/${encodeURIComponent(n)}.png`.replace(/\/+/g, '/');
 
     return (
       <img 
@@ -442,29 +437,28 @@ function App() {
         alt={nome} 
         style={stile} 
         onError={(e) => { 
-          // 1° Tentativo: Tutto minuscolo (comune per molti file su GitHub)
+          // 1. Prova tutto minuscolo
           if (!e.target.dataset.triedLower) {
             e.target.dataset.triedLower = "true";
             e.target.src = getUrl(nome.toLowerCase());
           } 
-          // 2° Tentativo: Senza spazi (es. "Poke Ball" -> "PokeBall")
+          // 2. Prova senza spazi (es. "Poke Ball" -> "PokeBall")
           else if (!e.target.dataset.triedNoSpace) {
             e.target.dataset.triedNoSpace = "true";
             e.target.src = getUrl(nome.replace(/\s/g, ''));
           } 
-          // 3° Tentativo (Solo PKM): Nome Base (es. "Toxtricity (Amped Form)" -> "Toxtricity")
+          // 3. Prova il nome base (per le forme come Toxtricity)
           else if (!e.target.dataset.triedBase && tipo === 'pokemon') {
             e.target.dataset.triedBase = "true";
             const pkmBase = nome.split(' (')[0];
             e.target.src = getUrl(pkmBase);
           } 
-          // 4° Tentativo: Estensione maiuscola .PNG
+          // 4. Prova estensione maiuscola
           else if (!e.target.dataset.triedCaps) {
             e.target.dataset.triedCaps = "true";
             e.target.src = e.target.src.replace('.png', '.PNG');
           }
           else {
-            // Se fallisce tutto, nascondi l'immagine rotta
             e.target.style.display = 'none'; 
           }
         }} 
@@ -584,15 +578,33 @@ function App() {
                 </div>
                 {zaino.map((item, i) => (
   <div key={i} style={styles.sheetItemRow}>
-    {/* Questa riga carica l'immagine dell'oggetto */}
+    {/* Contenitore Immagine Oggetto */}
     <div style={styles.imgContainer}>
       {renderImmagine('item', item.Name, styles.itemImage)}
     </div>
     
-    <div style={{flex:1, marginLeft: 15}}>
-      <strong style={{color: '#fff'}}>{item.customName || tItem(item.Name)}</strong>
+    <div style={{flex: 1, marginLeft: 15}}>
+      <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+        <strong style={{color: '#fff', fontSize: '16px'}}>{item.customName || tItem(item.Name)}</strong>
+        <div style={{display: 'flex', alignItems: 'center', gap: 10}}>
+          <input 
+            type="number" 
+            value={item.qty} 
+            style={styles.sheetMiniInput} 
+            onChange={e => { 
+              const val = parseInt(e.target.value) || 0; 
+              if (val <= 0) rimuoviDalloZaino(i); 
+              else { const n = [...zaino]; n[i].qty = val; setZaino(n); } 
+            }}
+          />
+          <button onClick={() => rimuoviDalloZaino(i)} style={styles.btnDeletePiccolo}>❌</button>
+        </div>
+      </div>
+      {/* DESCRIZIONE RIPRISTINATA */}
+      <div style={{fontSize: '12px', color: '#aaa', marginTop: '4px', fontStyle: 'italic'}}>
+        {item.Description || "Nessuna descrizione disponibile"}
+      </div>
     </div>
-    {/* ... resto del codice per quantità e tasto elimina ... */}
   </div>
 ))}
               </div>
@@ -745,8 +757,22 @@ const styles = {
   sheetSkillRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 10px', borderBottom: '1px solid #333', cursor: 'pointer' },
   sheetMiniInput: { width: '35px', background: '#111', border: '1px solid #555', color: '#fff', textAlign: 'center', borderRadius: '5px', fontSize: '14px', fontWeight: 'bold' },
   sheetItemRow: { backgroundColor: '#1a1a1a', padding: '10px', borderRadius: '10px', border: '1px solid #333', display: 'flex', alignItems: 'center', marginBottom: '8px', flexWrap: 'wrap' },
-  itemImage: { width: 40, height: 40, objectFit: 'contain' },
-  imgContainer: {backgroundColor: '#1a1a1a', borderRadius: '8px', padding: '5px', display: 'flex', justifyContent: 'center', alignItems: 'center', width: '50px', height: '50px' },
+  itemImage: { 
+    width: '40px', 
+    height: '40px', 
+    objectFit: 'contain' 
+  },
+  imgContainer: { 
+    backgroundColor: '#1a1a1a', 
+    borderRadius: '10px', 
+    padding: '5px', 
+    display: 'flex', 
+    justifyContent: 'center', 
+    alignItems: 'center',
+    width: '50px',
+    height: '50px',
+    border: '1px solid #333'
+  },
   sheetMoveCard: { backgroundColor: '#252525', border: '1px solid #444', borderRadius: '10px', padding: '12px' },
   btnCircleMin: { background: 'none', border: '1px solid #ff4757', color: '#ff4757', borderRadius: '50%', width: '25px', height: '25px', cursor: 'pointer' },
   btnCircleMinBlue: { background: 'none', border: '1px solid #4bcffa', color: '#4bcffa', borderRadius: '50%', width: '25px', height: '25px', cursor: 'pointer' },
