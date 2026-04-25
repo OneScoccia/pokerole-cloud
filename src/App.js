@@ -20,7 +20,7 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 
 // --- FIX PERCORSO (LOCALE VS ONLINE) ---
-const BASE_URL = window.location.hostname.includes("localhost") ? "" : "/pokerole-cloud";
+const BASE_URL = (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") ? "" : "/pokerole-cloud";
 
 
 // --- COLORI E DIZIONARI UFFICIALI ---
@@ -410,51 +410,44 @@ function App() {
   };
 
    const renderImmagine = (tipo, nome, stile) => {
-    if (!nome) return null;
-    
-    // Capisce se è un Gigamax per cercare nella cartella giusta
-    const isGmax = nome.toLowerCase().includes("gigantamax");
-    const cartella = isGmax ? 'HomeSprites' : (tipo === 'pokemon' ? 'BookSprites' : 'Items');
-    const getUrl = (n, folder = cartella) => `${BASE_URL}/data/images/${folder}/${encodeURIComponent(n)}.png`;
+  if (!nome) return null;
+  const cartella = tipo === 'pokemon' ? 'BookSprites' : 'Items';
+  
+  // Funzione interna per generare l'URL
+  const getUrl = (n, ext = '.png') => `${BASE_URL}/data/images/${cartella}/${encodeURIComponent(n)}${ext}`;
 
-    return (
-      <img 
-        key={nome}
-        src={getUrl(nome)} // Tentativo 0: Nome originale esatto
-        alt={nome} 
-        style={stile} 
-        onError={(e) => { 
-          // Tentativo 1: Trattini MANTENENDO la parola "Form" (Es: Toxtricity-Amped-Form)
-          if (!e.target.dataset.triedDashForm) {
-            e.target.dataset.triedDashForm = "true";
-            const nDashForm = nome.replace(/\s*\(\s*/g, '-').replace(/\s*\)\s*/g, '').trim().replace(/\s+/g, '-');
-            e.target.src = getUrl(nDashForm);
-          }
-          // Tentativo 2: Trattini SENZA la parola "Form" (Es: Charizard-Mega-X o Zygarde-10%)
-          else if (!e.target.dataset.triedDashNoForm) {
-            e.target.dataset.triedDashNoForm = "true";
-            const nDashNoForm = nome.replace(/\s*Form\b/gi, '').replace(/\s*\(|\)/g, '').trim().replace(/\s+/g, '-');
-            e.target.src = getUrl(nDashNoForm);
-          } 
-          // Tentativo 3: Tutto attaccato per gli oggetti (Es: AbilityCapsule)
-          else if (!e.target.dataset.triedClean) {
-            e.target.dataset.triedClean = "true";
-            const nClean = nome.replace(/\s*Form\b/gi, '').replace(/[\s()]+/g, '');
-            e.target.src = getUrl(nClean);
-          }
-          // Tentativo 4: Fallback di emergenza alla forma Base (Es: Charizard normale)
-          else if (!e.target.dataset.triedBase && tipo === 'pokemon') {
-            e.target.dataset.triedBase = "true";
-            e.target.src = getUrl(nome.split(' (')[0]);
-          } 
-          else { 
-            // Se falliscono tutti, nasconde l'icona rotta
-            e.target.style.display = 'none'; 
-          }
-        }} 
-      />
-    );
-  };
+  return (
+    <img 
+      key={nome}
+      src={getUrl(nome)} // Tentativo 1: Nome originale (es. Zygarde (10% Form))
+      alt={nome} 
+      style={stile} 
+      onError={(e) => { 
+        // Tentativo 2: Formato Trattini Minuscolo (es. zygarde-10%)
+        if (!e.target.dataset.triedDash) {
+          e.target.dataset.triedDash = "true";
+          const nDash = nome.replace(/\s*\(|\)/g, '').replace(/\s*form/gi, '').trim().replace(/\s+/g, '-').toLowerCase();
+          e.target.src = getUrl(nDash);
+        } 
+        // Tentativo 3: Caso speciale Gigantamax (es. appletun-gigantamax-form.png.png)
+        else if (nome.toLowerCase().includes("gigantamax") && !e.target.dataset.triedDouble) {
+          e.target.dataset.triedDouble = "true";
+          const nDash = nome.replace(/\s*\(|\)/g, '').trim().replace(/\s+/g, '-').toLowerCase();
+          e.target.src = getUrl(nDash + ".png"); // Aggiunge il secondo .png
+        }
+        // Tentativo 4: Fallback alla forma base (es. Charizard)
+        else if (!e.target.dataset.triedBase && tipo === 'pokemon') {
+          e.target.dataset.triedBase = "true";
+          const baseName = nome.split(' (')[0];
+          e.target.src = getUrl(baseName);
+        } 
+        else {
+          e.target.style.display = 'none';
+        }
+      }} 
+    />
+  );
+};
 
 
 
