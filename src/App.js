@@ -20,7 +20,8 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 
 // --- FIX PERCORSO (LOCALE VS ONLINE) ---
-const BASE_URL = process.env.PUBLIC_URL;
+const BASE_URL = window.location.hostname.includes("localhost") ? "" : "/pokerole-cloud";
+
 
 // --- COLORI E DIZIONARI UFFICIALI ---
 const typeColors = {
@@ -472,7 +473,7 @@ function App() {
     </div>
   );
 
-  
+
   const renderPkmSkillGroup = (title, skillsArray, p) => (
     <div style={styles.sheetBox}>
       <div style={styles.sheetBoxHeader}>{title}</div>
