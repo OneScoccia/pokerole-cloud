@@ -472,6 +472,7 @@ function App() {
     </div>
   );
 
+  
   const renderPkmSkillGroup = (title, skillsArray, p) => (
     <div style={styles.sheetBox}>
       <div style={styles.sheetBoxHeader}>{title}</div>
