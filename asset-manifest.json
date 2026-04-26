@@ -1,15 +1,15 @@
 {
   "files": {
     "main.css": "/pokerole-cloud/static/css/main.e6c13ad2.css",
-    "main.js": "/pokerole-cloud/static/js/main.8f91ad86.js",
+    "main.js": "/pokerole-cloud/static/js/main.bc8bdf47.js",
     "static/js/453.a79f4520.chunk.js": "/pokerole-cloud/static/js/453.a79f4520.chunk.js",
     "index.html": "/pokerole-cloud/index.html",
     "main.e6c13ad2.css.map": "/pokerole-cloud/static/css/main.e6c13ad2.css.map",
-    "main.8f91ad86.js.map": "/pokerole-cloud/static/js/main.8f91ad86.js.map",
+    "main.bc8bdf47.js.map": "/pokerole-cloud/static/js/main.bc8bdf47.js.map",
     "453.a79f4520.chunk.js.map": "/pokerole-cloud/static/js/453.a79f4520.chunk.js.map"
   },
   "entrypoints": [
     "static/css/main.e6c13ad2.css",
-    "static/js/main.8f91ad86.js"
+    "static/js/main.bc8bdf47.js"
   ]
 }
