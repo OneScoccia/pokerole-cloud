@@ -414,34 +414,43 @@ function App() {
     // Capisce se è un Gigamax per cercare nella cartella giusta
     const isGmax = nome.toLowerCase().includes("gigantamax");
     const cartella = isGmax ? 'HomeSprites' : (tipo === 'pokemon' ? 'BookSprites' : 'Items');
-    const getUrl = (n, folder = cartella) => `${BASE_URL}/data/images/${folder}/${encodeURIComponent(n)}.png`;
+    
+    // Assicurati che BASE_URL sia corretto (puoi anche forzarlo a vuoto se sei in locale)
+    const baseUrlSafe = BASE_URL || ''; 
+
+    const getUrl = (n, folder = cartella) => `${baseUrlSafe}/data/images/${folder}/${encodeURIComponent(n)}.png`;
+
+    // Funzione helper per pulire il nome del Pokémon
+    const formatPokemonNameForImage = (rawName) => {
+      // 1. Rimuove la parola "Form" dentro le parentesi
+      let clean = rawName.replace(/\s*Form\b/gi, '');
+      // 2. Sostituisce gli spazi con i trattini, rimuove le parentesi
+      clean = clean.replace(/\s*\(\s*/g, '-').replace(/\s*\)\s*/g, '').replace(/\s+/g, '-');
+      // 3. Rimuove eventuali trattini doppi o alla fine
+      return clean.replace(/-+/g, '-').replace(/-$/, '');
+    };
+
+    const nomePulito = formatPokemonNameForImage(nome);
 
     return (
       <img 
         key={nome}
-        src={getUrl(nome)} // Tentativo 0: Nome originale esatto
+        src={getUrl(nomePulito)} // Primo tentativo: Nome formattato
         alt={nome} 
         style={stile} 
         onError={(e) => { 
-          // Tentativo 1: Trattini MANTENENDO la parola "Form" (Es: Toxtricity-Amped-Form)
-          if (!e.target.dataset.triedDashForm) {
-            e.target.dataset.triedDashForm = "true";
-            const nDashForm = nome.replace(/\s*\(\s*/g, '-').replace(/\s*\)\s*/g, '').trim().replace(/\s+/g, '-');
-            e.target.src = getUrl(nDashForm);
+          // Se fallisce il nome formattato, prova il nome originale esatto
+          if (!e.target.dataset.triedOriginal) {
+            e.target.dataset.triedOriginal = "true";
+            e.target.src = getUrl(nome);
           }
-          // Tentativo 2: Trattini SENZA la parola "Form" (Es: Charizard-Mega-X o Zygarde-10%)
-          else if (!e.target.dataset.triedDashNoForm) {
-            e.target.dataset.triedDashNoForm = "true";
-            const nDashNoForm = nome.replace(/\s*Form\b/gi, '').replace(/\s*\(|\)/g, '').trim().replace(/\s+/g, '-');
-            e.target.src = getUrl(nDashNoForm);
-          } 
           // Tentativo 3: Tutto attaccato per gli oggetti (Es: AbilityCapsule)
           else if (!e.target.dataset.triedClean) {
             e.target.dataset.triedClean = "true";
-            const nClean = nome.replace(/\s*Form\b/gi, '').replace(/[\s()]+/g, '');
+            const nClean = nome.replace(/[\s()]+/g, '');
             e.target.src = getUrl(nClean);
           }
-          // Tentativo 4: Fallback di emergenza alla forma Base (Es: Charizard normale)
+          // Fallback di emergenza alla forma Base (Es: Charizard normale)
           else if (!e.target.dataset.triedBase && tipo === 'pokemon') {
             e.target.dataset.triedBase = "true";
             e.target.src = getUrl(nome.split(' (')[0]);
