@@ -19,7 +19,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-const BASE_URL = process.env.PUBLIC_URL || '';
+const BASE_URL = window.location.hostname === "localhost" ? "" : "/pokerole-cloud";
 
 // --- COLORI E DIZIONARI UFFICIALI ---
 const typeColors = {
@@ -413,61 +413,55 @@ function App() {
   const renderImmagine = (tipo, nome, stile) => {
   if (!nome) return null;
   
-  // IL FIX PRINCIPALE È QUI: Niente più 'HomeSprites', tutto va in 'BookSprites' o 'Items'
   const cartella = tipo === 'pokemon' ? 'BookSprites' : 'Items';
   
+  // URL di base senza ambiguità
   const getUrl = (n, folder = cartella) => `${BASE_URL}/data/images/${folder}/${encodeURIComponent(n)}.png`;
 
   return (
     <img 
       key={nome}
-      src={getUrl(nome)} // Tentativo 0: Nome originale esatto
+      src={getUrl(nome)} // Tentativo 0: Nome esatto
       alt={nome} 
       style={stile} 
       onError={(e) => { 
-        // Tentativo 1: Trattini MANTENENDO la parola "Form" (Es: Toxtricity-Amped-Form)
         if (!e.target.dataset.triedDashForm) {
           e.target.dataset.triedDashForm = "true";
           const nDashForm = nome.replace(/\s*\(\s*/g, '-').replace(/\s*\)\s*/g, '').trim().replace(/\s+/g, '-');
           e.target.src = getUrl(nDashForm);
         }
-        // Tentativo 2: Trattini SENZA la parola "Form" (Es: Charizard-Mega-X o Zygarde-10%)
         else if (!e.target.dataset.triedDashNoForm) {
           e.target.dataset.triedDashNoForm = "true";
           const nDashNoForm = nome.replace(/\s*Form\b/gi, '').replace(/\s*\(|\)/g, '').trim().replace(/\s+/g, '-');
           e.target.src = getUrl(nDashNoForm);
         } 
-        // Tentativo 3: Variante specifica Gigantamax (Es: Charizard-Gigantamax)
         else if (!e.target.dataset.triedGmax && nome.includes('Gigantamax')) {
           e.target.dataset.triedGmax = "true";
           const nGmax = nome.split(' (')[0] + '-Gigantamax';
           e.target.src = getUrl(nGmax);
         }
-        // Tentativo 4: Tutto attaccato per gli oggetti (Es: AbilityCapsule)
         else if (!e.target.dataset.triedClean) {
           e.target.dataset.triedClean = "true";
           const nClean = nome.replace(/\s*Form\b/gi, '').replace(/[\s()]+/g, '');
           e.target.src = getUrl(nClean);
         }
-        // Tentativo 5: Fallback di emergenza alla forma Base (Es: Charizard normale se non trova il Mega/Gmax)
         else if (!e.target.dataset.triedBase && tipo === 'pokemon') {
           e.target.dataset.triedBase = "true";
           e.target.src = getUrl(nome.split(' (')[0]);
         } 
-        // Tentativo 6: GITHUB PAGES FIX (Riprova tutto il percorso ma in minuscolo per aggirare i server Linux)
         else if (!e.target.dataset.triedLower) {
           e.target.dataset.triedLower = "true";
           e.target.src = e.target.src.toLowerCase();
         }
         else { 
-          // Se falliscono tutti, nasconde l'icona rotta
           e.target.style.display = 'none'; 
+          // Stampa un log che puoi leggere nella console di GitHub!
+          console.error(`TUTTI I TENTATIVI FALLITI PER: ${nome}. Ultimo url: ${e.target.src}`);
         }
       }} 
     />
   );
 };
-
 
   const renderTrainerSkillGroup = (title, skillsArray) => (
     <div style={styles.sheetBox}>
