@@ -19,6 +19,8 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
+const BASE_URL = process.env.PUBLIC_URL || '';
+
 // --- COLORI E DIZIONARI UFFICIALI ---
 const typeColors = {
   Normal: '#A8A77A', Fire: '#EE8130', Water: '#6390F0', Electric: '#F7D02C',
@@ -56,15 +58,137 @@ const tradStrumentiEngToIta = {
   "Potion": "Pozione", "Super Potion": "Superpozione", "Hyper Potion": "Iperpozione", "Max Potion": "Pozione Max",
   "Full Restore": "Ricarica Totale", "Revive": "Revitalizzante", "Max Revive": "Revitalizzante Max", "Full Heal": "Cura Totale",
   "Antidote": "Antidoto", "Paralyze Heal": "Antiparalisi", "Awakening": "Sveglia", "Burn Heal": "Antiscottatura", "Ice Heal": "Antigelo",
-  "Elixir": "Elisir", "Max Elixir": "Elisir Max", "Ether": "Etere", "Max Ether": "Etere Max"
+  "Elixir": "Elisir", "Max Elixir": "Elisir Max", "Ether": "Etere", "Max Ether": "Etere Max",
+  "Berry Juice": "Succo di Bacca", "Fresh Water": "Acqua Fresca", "Soda Pop": "Gassosa", "Lemonade": "Lemonsucco", "Moomoo Milk": "Latte Mumu",
+  "Energy Powder": "Polvenergia", "Energy Root": "Radicenergia", "Heal Powder": "Polvocura", "Revival Herb": "Vitalerba",
+  "Oran Berry": "Baccarancia", "Sitrus Berry": "Baccacedro", "Lum Berry": "Baccaprugna", "Pecha Berry": "Baccapesca", 
+  "Rawst Berry": "Baccafrago", "Chesto Berry": "Baccacastagna", "Cheri Berry": "Baccaciliegia", "Aspear Berry": "Baccaperina",
+  "Persim Berry": "Baccaki", "Leppa Berry": "Baccamela", "Enigma Berry": "Baccenigma",
+  "Choice Band": "Bendascelta", "Choice Specs": "Lentiscelta", "Choice Scarf": "Stolascelta", "Life Orb": "Assorbisfera",
+  "Leftovers": "Avanzi", "Black Sludge": "Fangopece", "Eviolite": "Evolcondensa", "Assault Vest": "Corpetto Assalto",
+  "Focus Sash": "Focalnastro", "Focus Band": "Bandana", "Rocky Helmet": "Bitorzolelmo", "Expert Belt": "Cintura Esperto",
+  "Light Clay": "Creta Luce", "Miracle Seed": "Miracolseme", "Mystic Water": "Acquamagica", "Charcoal": "Carbonella",
+  "Magnet": "Calamita", "Sharp Beak": "Beccaffilato", "Poison Barb": "Velenaculeo", "Hard Stone": "Pietradura",
+  "Spell Tag": "Spettrotarga", "Twisted Spoon": "Cucchiaio Torto", "Silver Powder": "Argentopolvere", "Dragon Fang": "Dentedidrago",
+  "Silk Scarf": "Sciarpa Seta", "Never-Melt Ice": "Gelomai", "Metal Coat": "Metalcoperta", "Soft Sand": "Sabbia Soffice",
+  "Black Belt": "Cinturanera", "Black Glasses": "Occhialineri", "Destiny Knot": "Destincomune", "Kings Rock": "Roccia di Re",
+  "Quick Claw": "Rapidartigli", "Shell Bell": "Conchinella", "Shed Shell": "Disfoglia", "Amulet Coin": "Monetamuletto",
+  "Macho Brace": "Crescicappa", "Power Anklet": "Vigorcavigliera", "Power Band": "Vigorfascia", "Power Belt": "Vigorcintura",
+  "Power Bracer": "Vigorcerchio", "Power Herb": "Vigorerba", "Power Lens": "Vigorlente", "Power Weight": "Vigorpeso",
+  "Abomasite": "Abomasnowite", "Alakazite": "Alakazamite", "Heracronite": "Heracrossite", "Houndoominite": "Houndoomite",
+  "Manectite": "Manectricite", "Sablenite": "Sableyite", "Slowbronite": "Slowbroite",
+  "Armor Fossil": "Fossilscudo", "Claw Fossil": "Fossilunghia", "Cover Fossil": "Fossiltappo", "Dome Fossil": "Domofossile",
+  "Helix Fossil": "Helixfossile", "Jaw Fossil": "Fossilmascella", "Old Amber": "Ambra Antica", "Plume Fossil": "Fossilpiuma",
+  "Root Fossil": "Radifossile", "Skull Fossil": "Fossilcranio", "Dawn Stone": "Pietralbore", "Dusk Stone": "Pietrascura",
+  "Fire Stone": "Pietrafocaia", "Ice Stone": "Pietragelo", "Leaf Stone": "Pietrafoglia", "Moon Stone": "Pietralunare",
+  "Oval Stone": "Pietraovale", "Shiny Stone": "Pietrabrillo", "Sun Stone": "Pietrasolare", "Thunder Stone": "Pietratuono", "Water Stone": "Pietraidrica",
+  "Air Balloon": "Palloncino", "Big Root": "Granradice", "Binding Band": "Legafascia", "Bright Powder": "Luminpolvere",
+  "Cell Battery": "Ricaripila", "Damp Rock": "Rocciaumida", "Draco Plate": "Lastradrakon", "Dread Plate": "Lastratimore",
+  "Earth Plate": "Lastrageo", "Eject Button": "Pulsantefuga", "Eject Pack": "Zainofuga", "Electric Seed": "Elettroseme",
+  "Flame Orb": "Fiammosfera", "Flame Plate": "Lastrarogo", "Float Stone": "Pietralieve", "Grassy Seed": "Erboseme",
+  "Heat Rock": "Rocciacalda", "Heavy-Duty Boots": "Scarponi Robusti", "Icicle Plate": "Lastragelo", "Icy Rock": "Rocciafredda",
+  "Insect Plate": "Lastrabaco", "Iron Plate": "Lastraferro", "Meadow Plate": "Lastraprato", "Mental Herb": "Mentalerba",
+  "Mind Plate": "Lastramente", "Misty Seed": "Nebbioseme", "Pixie Plate": "Lastraspiritello", "Psychic Seed": "Psicoseme",
+  "Red Card": "Cartellinorosso", "Ring Target": "Facilsaglio", "Room Service": "Servizio in Camera", "Rose Incense": "Rosaroma",
+  "Safety Goggles": "Visierantisabbia", "Scope Lens": "Mirino", "Sea Incense": "Marearoma", "Shock Drive": "Voltmodulo",
+  "Sky Plate": "Lastracielo", "Smooth Rock": "Roccialiscia", "Snowball": "Palla di Neve", "Splash Plate": "Lastraidro",
+  "Spooky Plate": "Lastratetro", "Sticky Barb": "Vischiopunta", "Stone Plate": "Lastrapietra", "Terrain Extender": "Estensiterreno",
+  "Thick Club": "Ossospesso", "Toxic Orb": "Tossicosfera", "Toxic Plate": "Lastrafiele", "Utility Umbrella": "Ombrello Multiuso",
+  "Wave Incense": "Ondaroma", "Weakness Policy": "Vulneropolizza", "White Herb": "Biancherba", "Wide Lens": "Grandangolo",
+  "Wise Glasses": "Saviocchiali", "Zap Plate": "Lastrasaetta", "Beast Ball": "UC Ball", "Cherish Ball": "Pregio Ball",
+  "Dive Ball": "Sub Ball", "Dream Ball": "Dream Ball", "Dusk Ball": "Scuro Ball", "Fast Ball": "Rapid Ball",
+  "Friend Ball": "Friend Ball", "Heal Ball": "Cura Ball", "Heavy Ball": "Peso Ball", "Level Ball": "Level Ball",
+  "Love Ball": "Love Ball", "Lure Ball": "Esca Ball", "Luxury Ball": "Chic Ball", "Moon Ball": "Luna Ball",
+  "Nest Ball": "Minor Ball", "Net Ball": "Rete Ball", "Park Ball": "Park Ball", "Premier Ball": "Premier Ball",
+  "Quick Ball": "Velox Ball", "Repeat Ball": "Bis Ball", "Safari Ball": "Safari Ball", "Sport Ball": "Gara Ball",
+  "Timer Ball": "Timer Ball", "Ability Capsule": "Capsula Abilità", "Ability Patch": "Cerotto Abilità"
 };
+
 
 const tradMosseEngToIta = {
   "Tackle": "Azione", "Scratch": "Graffio", "Ember": "Braciere", "Water Gun": "Pistolacqua", 
   "Thunder Shock": "Sottocarica", "Vine Whip": "Frustata", "Razor Leaf": "Foglielama", 
   "Flamethrower": "Lanciafiamme", "Surf": "Surf", "Ice Beam": "Geloraggio", "Thunderbolt": "Fulmine", 
-  "Psychic": "Psichico"
+  "Psychic": "Psichico", "Earthquake": "Terremoto", "Recover": "Ripresa", "Fire Blast": "Fuocobomba", 
+  "Hydro Pump": "Idropompa", "Solar Beam": "Solarraggio", "Hyper Beam": "Iper Raggio", 
+  "Quick Attack": "Attacco Rapido", "Pound": "Botta", "Karate Chop": "Colpokarate", 
+  "Double Slap": "Doppiasberla", "Comet Punch": "Cometapugno", "Mega Punch": "Megapugno", 
+  "Pay Day": "Giornopaga", "Fire Punch": "Fuocopugno", "Ice Punch": "Gelopugno", "Thunder Punch": "Tuonopugno", 
+  "Vice Grip": "Presa", "Guillotine": "Ghigliottina", "Razor Wind": "Ventagliente", "Swords Dance": "Danzaspada", 
+  "Cut": "Taglio", "Gust": "Raffica", "Wing Attack": "Attacco d'Ala", "Whirlwind": "Turbine", "Fly": "Volo", 
+  "Bind": "Legatutto", "Slam": "Schianto", "Stomp": "Pestone", "Double Kick": "Doppiocalcio", "Mega Kick": "Megacalcio", 
+  "Jump Kick": "Calciosalto", "Rolling Kick": "Calciorullo", "Sand Attack": "Turbosabbia", "Headbutt": "Bottintesta", 
+  "Horn Attack": "Incornata", "Fury Attack": "Furia", "Horn Drill": "Perforcorno", "Body Slam": "Corposcontro", 
+  "Wrap": "Avvolbotta", "Take Down": "Riduttore", "Thrash": "Colpo", "Double-Edge": "Sdoppiatore", 
+  "Tail Whip": "Colpocoda", "Poison Sting": "Velenospina", "Twineedle": "Doppio Ago", "Pin Missile": "Missilspillo", 
+  "Leer": "Fulmisguardo", "Bite": "Morso", "Growl": "Ruggito", "Roar": "Boato", "Sing": "Canto", 
+  "Supersonic": "Supersuono", "Sonic Boom": "Sonicboom", "Disable": "Inibitore", "Acid": "Acido", 
+  "Mist": "Nebbia", "Blizzard": "Bora", "Psybeam": "Psicoraggio", "Bubble Beam": "Bollaraggio", 
+  "Aurora Beam": "Raggioaurora", "Peck": "Beccata", "Drill Peck": "Perforbecco", "Submission": "Sottomissione", 
+  "Low Kick": "Colpo Basso", "Counter": "Contatore", "Seismic Toss": "Movimento Sismico", "Strength": "Forza", 
+  "Absorb": "Assorbimento", "Mega Drain": "Megassorbimento", "Leech Seed": "Parassimese", "Growth": "Crescita", 
+  "Poison Powder": "Velenpolvere", "Stun Spore": "Paralizzante", "Sleep Powder": "Sonnifero", "Petal Dance": "Petalodanza", 
+  "String Shot": "Millebave", "Dragon Rage": "Ira di Drago", "Fire Spin": "Turbofuoco", "Thunder Wave": "Tuononda", 
+  "Thunder": "Tuono", "Rock Throw": "Sassata", "Fissure": "Abisso", "Dig": "Fossa", "Toxic": "Tossina", 
+  "Confusion": "Confusione", "Hypnosis": "Ipnosi", "Meditate": "Meditazione", "Agility": "Agilità", 
+  "Rage": "Ira", "Teleport": "Teletrasporto", "Night Shade": "Ombra Notturna", "Mimic": "Mimica", 
+  "Screech": "Stridio", "Double Team": "Doppioteam", "Harden": "Rafforzatore", "Minimize": "Minimizzato", 
+  "Smokescreen": "Muro di Fumo", "Confuse Ray": "Stordiraggio", "Withdraw": "Ritirata", "Defense Curl": "Ricciolscudo", 
+  "Barrier": "Barriera", "Light Screen": "Schermoluce", "Haze": "Nube", "Reflect": "Riflesso", "Focus Energy": "Focalenergia", 
+  "Bide": "Pazienza", "Metronome": "Metronomo", "Mirror Move": "Speculmossa", "Self-Destruct": "Autodistruzione", 
+  "Egg Bomb": "Uovobomba", "Lick": "Leccata", "Smog": "Smog", "Sludge": "Fango", "Bone Club": "Ossoclava", 
+  "Waterfall": "Cascata", "Clamp": "Tenaglia", "Swift": "Comete", "Skull Bash": "Capocciata", "Spike Cannon": "Sparalance", 
+  "Constrict": "Costrizione", "Amnesia": "Amnesia", "Kinesis": "Cinèsi", "Soft-Boiled": "Covauova", 
+  "High Jump Kick": "Calcinvolo", "Glare": "Bagliore", "Dream Eater": "Mangiasogni", "Poison Gas": "Velenogas", 
+  "Barrage": "Attacco Pioggia", "Leech Life": "Sanguisuga", "Lovely Kiss": "Demonbacio", "Sky Attack": "Aeroattacco", 
+  "Transform": "Trasformazione", "Bubble": "Bolla", "Dizzy Punch": "Stordipugno", "Spore": "Spora", 
+  "Flash": "Flash", "Psywave": "Psiconda", "Splash": "Splash", "Acid Armor": "Scudo Acido", "Crabhammer": "Martellata", 
+  "Explosion": "Esplosione", "Fury Swipes": "Sfuriate", "Bonemerang": "Ossomerang", "Rest": "Riposo", 
+  "Rock Slide": "Frana", "Hyper Fang": "Iperzanna", "Sharpen": "Affilatore", "Conversion": "Conversione", 
+  "Tri Attack": "Tripletta", "Super Fang": "Superzanna", "Slash": "Lacerazione", "Substitute": "Sostituto", 
+  "Struggle": "Scontro", "Sketch": "Schizzo", "Triple Kick": "Triplocalcio", "Thief": "Furto", "Spider Web": "Ragnatela", 
+  "Mind Reader": "Leggimente", "Nightmare": "Incubo", "Flame Wheel": "Ruotafuoco", "Snore": "Russare", 
+  "Curse": "Maledizione", "Flail": "Flagello", "Conversion 2": "Conversione2", "Aeroblast": "Aerocolpo", 
+  "Cotton Spore": "Cotonspora", "Reversal": "Contropiede", "Spite": "Dispetto", "Powder Snow": "Polneve", 
+  "Protect": "Protezione", "Mach Punch": "Pugnorapido", "Scary Face": "Visotruce", "Feint Attack": "Finta", 
+  "Sweet Kiss": "Dolcebacio", "Belly Drum": "Panciamburo", "Sludge Bomb": "Fangobomba", "Mud-Slap": "Fangosberla", 
+  "Octazooka": "Octazooka", "Spikes": "Punte", "Zap Cannon": "Falcecannone", "Foresight": "Preveggenza", 
+  "Destiny Bond": "Destinobbligato", "Perish Song": "Ultimocanto", "Icy Wind": "Ventogelato", "Detect": "Individua", 
+  "Bone Rush": "Ossoraffica", "Lock-On": "Localizza", "Outrage": "Oltraggio", "Sandstorm": "Terrempesta", 
+  "Giga Drain": "Gigassorbimento", "Endure": "Resistenza", "Charm": "Fascino", "Rollout": "Rotolamento", 
+  "False Swipe": "Falsofinale", "Swagger": "Bullismo", "Milk Drink": "Buonlatte", "Spark": "Scintilla", 
+  "Fury Cutter": "Tagliofuria", "Steel Wing": "Alacciaio", "Mean Look": "Malosguardo", "Attract": "Attrazione", 
+  "Sleep Talk": "Sonnolalia", "Heal Bell": "Rintoccasana", "Return": "Ritorno", "Present": "Regalo", 
+  "Frustration": "Frustrazione", "Safeguard": "Salvaguardia", "Pain Split": "Malcomune", "Sacred Fire": "Magifuoco", 
+  "Magnitude": "Magnitudo", "Dynamic Punch": "Dinamipugno", "Megahorn": "Megacorno", "Dragon Breath": "Dragospiro", 
+  "Baton Pass": "Staffetta", "Encore": "Ripeti", "Pursuit": "Inseguimento", "Rapid Spin": "Rapigiro", 
+  "Sweet Scent": "Profumino", "Iron Tail": "Codacciaio", "Metal Claw": "Ferrartigli", "Vital Throw": "Vitaltiro", 
+  "Morning Sun": "Mattindoro", "Synthesis": "Sintesi", "Moonlight": "Lucelunare", "Hidden Power": "Introforza", 
+  "Cross Chop": "Incrocolpo", "Twister": "Tornado", "Rain Dance": "Pioggiadanza", "Sunny Day": "Giornodisole", 
+  "Crunch": "Sgranocchio", "Mirror Coat": "Specchiovelo", "Psych Up": "Psicamisù", "Extreme Speed": "Extrarapido", 
+  "Ancient Power": "Forzantica", "Shadow Ball": "Palla Ombra", "Future Sight": "Divinazione", "Rock Smash": "Spaccaroccia", 
+  "Whirlpool": "Mulinello", "Beat Up": "Picchiaduro", "Fake Out": "Bruciapelo", "Uproar": "Baraonda", 
+  "Stockpile": "Accumulo", "Spit Up": "Sfoghenergia", "Swallow": "Introenergia", "Heat Wave": "Ondacalda", 
+  "Hail": "Grandine", "Torment": "Attaccaclite", "Flatter": "Adulazione", "Will-O-Wisp": "Fuocofatuo", 
+  "Memento": "Memento", "Facade": "Facciata", "Focus Punch": "Centripugno", "Smelling Salts": "Maniereforti", 
+  "Follow Me": "Sonoqui", "Nature Power": "Naturforza", "Charge": "Sottocarica", "Taunt": "Provocazione", 
+  "Helping Hand": "Altruismo", "Trick": "Raggiro", "Role Play": "Giocodiruolo", "Wish": "Desiderio", 
+  "Assist": "Assistente", "Ingrain": "Radicamento", "Superpower": "Troppoforte", "Magic Coat": "Magivelo", 
+  "Recycle": "Riciclo", "Revenge": "Vendetta", "Brick Break": "Breccia", "Yawn": "Sbadiglio", "Knock Off": "Privazione", 
+  "Endeavor": "Rimonta", "Eruption": "Eruzione", "Skill Swap": "Baratto", "Imprison": "Esclusiva", 
+  "Refresh": "Rinfrescata", "Grudge": "Rancore", "Snatch": "Scippo", "Secret Power": "Forzasegreta", 
+  "Dive": "Sub", "Arm Thrust": "Sberletese", "Camouflage": "Camuffamento", "Tail Glow": "Codadiluce", 
+  "Luster Purge": "Abbagliante", "Mist Ball": "Foschia", "Feather Dance": "Danzapiume", "Teeter Dance": "Strampadanza", 
+  "Blaze Kick": "Calciardente", "Mud Sport": "Fangata", "Ice Ball": "Palla Gelo", "Needle Arm": "Pugnospine", 
+  "Slack Off": "Pigro", "Hyper Voice": "Granvoce", "Poison Fang": "Velenodente", "Crush Claw": "Tritartigli", 
+  "Blast Burn": "Incendio", "Hydro Cannon": "Idrocannone", "Meteor Mash": "Meteorpugno", "Astonish": "Sgomento", 
+  "Weather Ball": "Palla Clima", "Aromatherapy": "Aromaterapia", "Fake Tears": "Falselacrime", "Air Cutter": "Aerasoio", 
+  "Overheat": "Vampata", "Odor Sleuth": "Segugio", "Rock Tomb": "Rocciotomba", "Silver Wind": "Ventargenteo", 
+  "Metal Sound": "Ferrostrido", "Grass Whistle": "Meloderba", "Tickle": "Solletico", "Cosmic Power": "Cosmoforza", 
+  "Water Spout": "Zampillo", "Signal Beam": "Segnoraggio", "Shadow Punch": "Pugnombra", "Extrasensory": "Extrasenso", 
+  "Sky Uppercut": "Stramontante", "Shadow Force": "Oscurotuffo"
 };
+
 
 const tradStrumentiItaToEng = Object.fromEntries(Object.entries(tradStrumentiEngToIta).map(([eng, ita]) => [ita, eng]));
 
@@ -117,9 +241,11 @@ const listaStrumentiBase = [
   "Wise Glasses", "Zap Plate"
 ];
 
+
 const listaPokemon = [
-"Bulbasaur", "Ivysaur", "Venusaur", "Venusaur (Mega Form)", "Charmander", "Charmeleon", "Charizard", "Charizard (Mega X Form)", "Charizard (Mega Y Form)", "Squirtle", "Wartortle", "Blastoise", "Blastoise (Mega Form)", "Caterpie", "Metapod", "Butterfree", "Weedle", "Kakuna", "Beedrill", "Beedrill (Mega Form)", "Pidgey", "Pidgeotto", "Pidgeot", "Pidgeot (Mega Form)", "Rattata", "Rattata (Alolan Form)", "Raticate", "Raticate (Alolan Form)", "Spearow", "Fearow", "Ekans", "Arbok", "Pikachu", "Raichu", "Raichu (Alolan Form)", "Sandshrew", "Sandshrew (Alolan Form)", "Sandslash", "Sandslash (Alolan Form)", "Nidoran F", "Nidorina", "Nidoqueen", "Nidoran M", "Nidorino", "Nidoking", "Clefairy", "Clefable", "Vulpix", "Vulpix (Alolan Form)", "Ninetales", "Ninetales (Alolan Form)", "Jigglypuff", "Wigglytuff", "Zubat", "Golbat", "Oddish", "Gloom", "Vileplume", "Paras", "Parasect", "Venonat", "Venomoth", "Diglett", "Diglett (Alolan Form)", "Dugtrio", "Dugtrio (Alolan Form)", "Meowth", "Meowth (Alolan Form)", "Meowth (Galarian Form)", "Persian", "Persian (Alolan Form)",  "Toxel", "Toxtricity (Amped Form)", "Toxtricity (Low Key Form)", "Sizzlipede", "Centiskorch", "Clobbopus", "Grapploct", "Sinistea", "Polteageist", "Hatenna", "Hattrem", "Hatterene", "Impidimp", "Morgrem", "Grimmsnarl", "Obstagoon", "Perrserker", "Cursola", "Sirfetch'd", "Mr. Rime", "Runerigus", "Milcery", "Alcremie", "Falinks", "Pincurchin", "Snom", "Frosmoth", "Stonjourner", "Eiscue", "Indeedee", "Morpeko", "Cufant", "Copperajah", "Dracozolt", "Arctozolt", "Dracovish", "Arctovish", "Duraludon", "Dreepy", "Drakloak", "Dragapult", "Zacian", "Zamazenta", "Eternatus", "Kubfu", "Urshifu", "Zarude", "Regieleki", "Regidrago", "Glastrier", "Spectrier", "Calyrex", "Calyrex (Ice Rider Form)", "Calyrex (Shadow Rider Form)", "Wyrdeer", "Kleavor", "Ursaluna", "Basculegion (Female Form)","Basculegion (Male Form)", "Sneasler", "Overqwil", "Enamorus", "Sprigatito", "Floragato", "Meowscarada", "Fuecoco", "Crocalor", "Skeledirge", "Quaxly", "Quaxwell", "Quaquaval", "Lechonk", "Oinkologne", "Tarountula", "Spidops", "Nymble", "Lokix", "Pawmi", "Pawmo", "Pawmot", "Tandemaus", "Maushold", "Fidough", "Dachsbun", "Smoliv", "Dolliv", "Arboliva", "Squawkabilly", "Nacli", "Naclstack", "Garganacl", "Charcadet", "Armarouge", "Ceruledge", "Tadbulb", "Bellibolt", "Wattrel", "Kilowattrel", "Maschiff", "Mabosstiff", "Shroodle", "Grafaiai", "Bramblin", "Brambleghast", "Toedscool", "Toedscruel", "Klawf", "Capsakid", "Scovillain", "Rellor", "Rabsca", "Flittle", "Espathra", "Tinkatink", "Tinkatuff", "Tinkaton", "Wiglett", "Wugtrio", "Bombirdier", "Finizen", "Palafin", "Varoom", "Revavroom", "Cyclizar", "Orthworm", "Glimmet", "Glimmora", "Greavard", "Houndstone", "Flamigo", "Cetoddle", "Cetitan", "Veluza", "Dondozo", "Tatsugiri", "Annihilape", "Clodsire", "Farigiraf", "Dudunsparce", "Kingambit", "Great Tusk", "Scream Tail", "Brute Bonnet", "Flutter Mane", "Slither Wing", "Sandy Shocks", "Iron Treads", "Iron Bundle", "Iron Hands", "Iron Jugulis", "Iron Moth", "Iron Thorns", "Frigibax", "Arctibax", "Baxcalibur", "Gimmighoul", "Gholdengo", "Wo-Chien", "Chien-Pao", "Ting-Lu", "Chi-Yu", "Roaring Moon", "Iron Valiant", "Koraidon", "Miraidon", "Venusaur (Gigantamax Form)", "Charizard (Gigantamax Form)", "Blastoise (Gigantamax Form)", "Pikachu (Gigantamax Form)", "Meowth (Gigantamax Form)", "Machamp (Gigantamax Form)", "Gengar (Gigantamax Form)", "Kingler (Gigantamax Form)", "Lapras (Gigantamax Form)", "Eevee (Gigantamax Form)", "Snorlax (Gigantamax Form)", "Garbodor (Gigantamax Form)", "Toxtricity (Gigantamax Form)", "Centiskorch (Gigantamax Form)", "Hatterene (Gigantamax Form)", "Grimmsnarl (Gigantamax Form)", "Alcremie (Gigantamax Form)", "Corviknight (Gigantamax Form)", "Urshifu (Gigantamax Form)", "Sandaconda (Gigantamax Form)", "Butterfree (Gigantamax Form)", "Ogerpon (Teal Mask Form)", "Ogerpon (Wellspring Mask Form)", "Ogerpon (Hearthflame Mask Form)", "Ogerpon (Cornerstone Mask Form)", "Poltchageist (Counterfeit Form)", "Poltchageist (Artisan Form)", "Sinistcha (Unremarkable Form)", "Sinistcha (Masterpiece Form)", "Urshifu (Single Strike Style)", "Urshifu (Rapid Strike Style)", "Lycanroc (Midday Form)", "Lycanroc (Midnight Form)", "Lycanroc (Dusk Form)", "Deoxys (Normal Form)", "Deoxys (Attack Form)", "Deoxys (Defense Form)", "Deoxys (Speed Form)", "Calyrex (Ice Rider)", "Calyrex (Shadow Rider)", "Meowstic (Male)", "Meowstic (Female)", "Indeedee (Male)", "Indeedee (Female)", "Oinkologne (Male)", "Oinkologne (Female)", "Basculegion (Male)", "Basculegion (Female)", "Basculin (Red-Striped Form)", "Basculin (Blue-Striped Form)", "Basculin (White-Striped Form)", "Tatsugiri (Curly Form)", "Tatsugiri (Droopy Form)", "Tatsugiri (Stretchy Form)", "Squawkabilly (Green Plumage)", "Squawkabilly (Blue Plumage)", "Squawkabilly (Yellow Plumage)", "Squawkabilly (White Plumage)", "Rotom (Normal Form)", "Rotom (Heat Form)", "Rotom (Wash Form)", "Rotom (Frost Form)", "Rotom (Fan Form)", "Rotom (Mow Form)", "Oricorio (Baile Style)", "Oricorio (Pom-Pom Style)", "Oricorio (Pa'u Style)", "Oricorio (Sensu Style)", "Terapagos (Normal Form)", "Terapagos (Terastal Form)", "Terapagos (Stellar Form)",
+"Bulbasaur", "Ivysaur", "Venusaur", "Venusaur (Mega Form)", "Charmander", "Charmeleon", "Charizard", "Charizard (Mega X Form)", "Charizard (Mega Y Form)", "Squirtle", "Wartortle", "Blastoise", "Blastoise (Mega Form)", "Caterpie", "Metapod", "Butterfree", "Weedle", "Kakuna", "Beedrill", "Beedrill (Mega Form)", "Pidgey", "Pidgeotto", "Pidgeot", "Pidgeot (Mega Form)", "Rattata", "Rattata (Alolan Form)", "Raticate", "Raticate (Alolan Form)", "Spearow", "Fearow", "Ekans", "Arbok", "Pikachu", "Raichu", "Raichu (Alolan Form)", "Sandshrew", "Sandshrew (Alolan Form)", "Sandslash", "Sandslash (Alolan Form)", "Nidoran F", "Nidorina", "Nidoqueen", "Nidoran M", "Nidorino", "Nidoking", "Clefairy", "Clefable", "Vulpix", "Vulpix (Alolan Form)", "Ninetales", "Ninetales (Alolan Form)", "Jigglypuff", "Wigglytuff", "Zubat", "Golbat", "Oddish", "Gloom", "Vileplume", "Paras", "Parasect", "Venonat", "Venomoth", "Diglett", "Diglett (Alolan Form)", "Dugtrio", "Dugtrio (Alolan Form)", "Meowth", "Meowth (Alolan Form)", "Meowth (Galarian Form)", "Persian", "Persian (Alolan Form)", "Psyduck", "Golduck", "Mankey", "Primeape", "Growlithe", "Growlithe (Hisuian Form)", "Arcanine", "Arcanine (Hisuian Form)", "Poliwag", "Poliwhirl", "Poliwrath", "Abra", "Kadabra", "Alakazam", "Alakazam (Mega Form)", "Machop", "Machoke", "Machamp", "Bellsprout", "Weepinbell", "Victreebel", "Tentacool", "Tentacruel", "Geodude", "Geodude (Alolan Form)", "Graveler", "Graveler (Alolan Form)", "Golem", "Golem (Alolan Form)", "Ponyta", "Ponyta (Galarian Form)", "Rapidash", "Rapidash (Galarian Form)", "Slowpoke", "Slowpoke (Galarian Form)", "Slowbro", "Slowbro (Mega Form)", "Slowbro (Galarian Form)", "Magnemite", "Magneton", "Farfetch'd", "Farfetch'd (Galarian Form)", "Doduo", "Dodrio", "Seel", "Dewgong", "Grimer", "Grimer (Alolan Form)", "Muk", "Muk (Alolan Form)", "Shellder", "Cloyster", "Gastly", "Haunter", "Gengar", "Gengar (Mega Form)", "Onix", "Drowzee", "Hypno", "Krabby", "Kingler", "Voltorb", "Voltorb (Hisuian Form)", "Electrode", "Electrode (Hisuian Form)", "Exeggcute", "Exeggutor", "Exeggutor (Alolan Form)", "Cubone", "Marowak", "Marowak (Alolan Form)", "Hitmonlee", "Hitmonchan", "Lickitung", "Koffing", "Weezing", "Weezing (Galarian Form)", "Rhyhorn", "Rhydon", "Chansey", "Tangela", "Kangaskhan", "Kangaskhan (Mega Form)", "Horsea", "Seadra", "Goldeen", "Seaking", "Staryu", "Starmie", "Mr. Mime", "Mr. Mime (Galarian Form)", "Scyther", "Jynx", "Electabuzz", "Magmar", "Pinsir", "Pinsir (Mega Form)", "Tauros", "Tauros (Paldean Form)", "Magikarp", "Gyarados", "Gyarados (Mega Form)", "Lapras", "Ditto", "Eevee", "Vaporeon", "Jolteon", "Flareon", "Porygon", "Omanyte", "Omastar", "Kabuto", "Kabutops", "Aerodactyl", "Aerodactyl (Mega Form)", "Snorlax", "Articuno", "Articuno (Galarian Form)", "Zapdos", "Zapdos (Galarian Form)", "Moltres", "Moltres (Galarian Form)", "Dratini", "Dragonair", "Dragonite", "Mewtwo", "Mewtwo (Mega X Form)", "Mewtwo (Mega Y Form)", "Mew", "Chikorita", "Bayleef", "Meganium", "Cyndaquil", "Quilava", "Typhlosion", "Typhlosion (Hisuian Form)", "Totodile", "Croconaw", "Feraligatr", "Sentret", "Furret", "Hoothoot", "Noctowl", "Ledyba", "Ledian", "Spinarak", "Ariados", "Crobat", "Chinchou", "Lanturn", "Pichu", "Cleffa", "Igglybuff", "Togepi", "Togetic", "Natu", "Xatu", "Mareep", "Flaaffy", "Ampharos", "Ampharos (Mega Form)", "Bellossom", "Marill", "Azumarill", "Sudowoodo", "Politoed", "Hoppip", "Skiploom", "Jumpluff", "Aipom", "Sunkern", "Sunflora", "Yanma", "Wooper", "Wooper (Paldean Form)", "Quagsire", "Espeon", "Umbreon", "Murkrow", "Slowking", "Slowking (Galarian Form)", "Misdreavus", "Unown", "Wobbuffet", "Girafarig", "Pineco", "Forretress", "Dunsparce", "Gligar", "Steelix", "Steelix (Mega Form)", "Snubbull", "Granbull", "Qwilfish", "Qwilfish (Hisuian Form)", "Scizor", "Scizor (Mega Form)", "Shuckle", "Heracross", "Heracross (Mega Form)", "Sneasel", "Sneasel (Hisuian Form)", "Teddiursa", "Ursaring", "Slugma", "Magcargo", "Swinub", "Piloswine", "Corsola", "Corsola (Galarian Form)", "Remoraid", "Octillery", "Delibird", "Mantine", "Skarmory", "Houndour", "Houndoom", "Houndoom (Mega Form)", "Kingdra", "Phanpy", "Donphan", "Porygon2", "Stantler", "Smeargle", "Tyrogue", "Hitmontop", "Smoochum", "Elekid", "Magby", "Miltank", "Blissey", "Raikou", "Entei", "Suicune", "Larvitar", "Pupitar", "Tyranitar", "Tyranitar (Mega Form)", "Lugia", "Ho-Oh", "Celebi", "Treecko", "Grovyle", "Sceptile", "Sceptile (Mega Form)", "Torchic", "Combusken", "Blaziken", "Blaziken (Mega Form)", "Mudkip", "Marshtomp", "Swampert", "Swampert (Mega Form)", "Poochyena", "Mightyena", "Zigzagoon", "Zigzagoon (Galarian Form)", "Linoone", "Linoone (Galarian Form)", "Wurmple", "Silcoon", "Beautifly", "Cascoon", "Dustox", "Lotad", "Lombre", "Ludicolo", "Seedot", "Nuzleaf", "Shiftry", "Taillow", "Swellow", "Wingull", "Pelipper", "Ralts", "Kirlia", "Gardevoir", "Gardevoir (Mega Form)", "Surskit", "Masquerain", "Shroomish", "Breloom", "Slakoth", "Vigoroth", "Slaking", "Nincada", "Ninjask", "Shedinja", "Whismur", "Loudred", "Exploud", "Makuhita", "Hariyama", "Azurill", "Nosepass", "Skitty", "Delcatty", "Sableye", "Sableye (Mega Form)", "Mawile", "Mawile (Mega Form)", "Aron", "Lairon", "Aggron", "Aggron (Mega Form)", "Meditite", "Medicham", "Medicham (Mega Form)", "Electrike", "Manectric", "Manectric (Mega Form)", "Plusle", "Minun", "Volbeat", "Illumise", "Roselia", "Gulpin", "Swalot", "Carvanha", "Sharpedo", "Sharpedo (Mega Form)", "Wailmer", "Wailord", "Numel", "Camerupt", "Camerupt (Mega Form)", "Torkoal", "Spoink", "Grumpig", "Spinda", "Trapinch", "Vibrava", "Flygon", "Cacnea", "Cacturne", "Swablu", "Altaria", "Altaria (Mega Form)", "Zangoose", "Seviper", "Lunatone", "Solrock", "Barboach", "Whiscash", "Corphish", "Crawdaunt", "Baltoy", "Claydol", "Lileep", "Cradily", "Anorith", "Armaldo", "Feebas", "Milotic", "Castform", "Kecleon", "Shuppet", "Banette", "Banette (Mega Form)", "Duskull", "Dusclops", "Tropius", "Chimecho", "Absol", "Absol (Mega Form)", "Wynaut", "Snorunt", "Glalie", "Glalie (Mega Form)", "Spheal", "Sealeo", "Walrein", "Clamperl", "Huntail", "Gorebyss", "Relicanth", "Luvdisc", "Bagon", "Shelgon", "Salamence", "Salamence (Mega Form)", "Beldum", "Metang", "Metagross", "Metagross (Mega Form)", "Regirock", "Regice", "Registeel", "Latias", "Latias (Mega Form)", "Latios", "Latios (Mega Form)", "Kyogre", "Groudon", "Rayquaza", "Rayquaza (Mega Form)", "Jirachi", "Deoxys", "Turtwig", "Grotle", "Torterra", "Chimchar", "Monferno", "Infernape", "Piplup", "Prinplup", "Empoleon", "Starly", "Staravia", "Staraptor", "Bidoof", "Bibarel", "Kricketot", "Kricketune", "Shinx", "Luxio", "Luxray", "Budew", "Roserade", "Cranidos", "Rampardos", "Shieldon", "Bastiodon", "Burmy", "Wormadam", "Mothim", "Combee", "Vespiquen", "Pachirisu", "Buizel", "Floatzel", "Cherubi", "Cherrim", "Shellos", "Gastrodon", "Ambipom", "Drifloon", "Drifblim", "Buneary", "Lopunny", "Lopunny (Mega Form)", "Mismagius", "Honchkrow", "Glameow", "Purugly", "Chingling", "Stunky", "Skuntank", "Bronzor", "Bronzong", "Bonsly", "Mime Jr.", "Happiny", "Chatot", "Spiritomb", "Gible", "Gabite", "Garchomp", "Garchomp (Mega Form)", "Munchlax", "Riolu", "Lucario", "Lucario (Mega Form)", "Hippopotas", "Hippowdon", "Skorupi", "Drapion", "Croagunk", "Toxicroak", "Carnivine", "Finneon", "Lumineon", "Mantyke", "Snover", "Abomasnow", "Abomasnow (Mega Form)", "Weavile", "Magnezone", "Lickilicky", "Rhyperior", "Tangrowth", "Electivire", "Magmortar", "Togekiss", "Yanmega", "Leafeon", "Glaceon", "Gliscor", "Mamoswine", "Porygon-Z", "Gallade", "Gallade (Mega Form)", "Probopass", "Dusknoir", "Froslass", "Rotom", "Uxie", "Mesprit", "Azelf", "Dialga", "Palkia", "Heatran", "Regigigas", "Giratina", "Cresselia", "Phione", "Manaphy", "Darkrai", "Shaymin", "Arceus", "Victini", "Snivy", "Servine", "Serperior", "Tepig", "Pignite", "Emboar", "Oshawott", "Dewott", "Samurott", "Samurott (Hisuian Form)", "Patrat", "Watchog", "Lillipup", "Herdier", "Stoutland", "Purrloin", "Liepard", "Pansage", "Simisage", "Pansear", "Simisear", "Panpour", "Simipour", "Munna", "Musharna", "Pidove", "Tranquill", "Unfezant", "Blitzle", "Zebstrika", "Roggenrola", "Boldore", "Gigalith", "Woobat", "Swoobat", "Drilbur", "Excadrill", "Audino", "Audino (Mega Form)", "Timburr", "Gurdurr", "Conkeldurr", "Tympole", "Palpitoad", "Seismitoad", "Throh", "Sawk", "Sewaddle", "Swadloon", "Leavanny", "Venipede", "Whirlipede", "Scolipede", "Cottonee", "Whimsicott", "Petilil", "Lilligant", "Lilligant (Hisuian Form)", "Basculin", "Basculin (Hisuian Form)", "Sandile", "Krokorok", "Krookodile", "Darumaka", "Darumaka (Galarian Form)", "Darmanitan", "Darmanitan (Galarian Form)", "Maractus", "Dwebble", "Crustle", "Scraggy", "Scrafty", "Sigilyph", "Yamask", "Yamask (Galarian Form)", "Cofagrigus", "Tirtouga", "Carracosta", "Archen", "Archeops", "Trubbish", "Garbodor", "Zorua", "Zorua (Hisuian Form)", "Zoroark", "Zoroark (Hisuian Form)", "Minccino", "Cinccino", "Gothita", "Gothorita", "Gothitelle", "Solosis", "Duosion", "Reuniclus", "Ducklett", "Swanna", "Vanillite", "Vanillish", "Vanilluxe", "Deerling", "Sawsbuck", "Emolga", "Karrablast", "Escavalier", "Foongus", "Amoonguss", "Frillish", "Jellicent", "Alomomola", "Joltik", "Galvantula", "Ferroseed", "Ferrothorn", "Klink", "Klang", "Klinklang", "Tynamo", "Eelektrik", "Eelektross", "Elgyem", "Beheeyem", "Litwick", "Lampent", "Chandelure", "Axew", "Fraxure", "Haxorus", "Cubchoo", "Beartic", "Cryogonal", "Shelmet", "Accelgor", "Stunfisk", "Stunfisk (Galarian Form)", "Mienfoo", "Mienshao", "Druddigon", "Golett", "Golurk", "Pawniard", "Bisharp", "Bouffalant", "Rufflet", "Braviary", "Braviary (Hisuian Form)", "Vullaby", "Mandibuzz", "Heatmor", "Durant", "Deino", "Zweilous", "Hydreigon", "Larvesta", "Volcarona", "Cobalion", "Terrakion", "Virizion", "Tornadus", "Thundurus", "Reshiram", "Zekrom", "Landorus", "Kyurem", "Keldeo", "Meloetta", "Genesect", "Chespin", "Quilladin", "Chesnaught", "Fennekin", "Braixen", "Delphox", "Froakie", "Frogadier", "Greninja", "Bunnelby", "Diggersby", "Fletchling", "Fletchinder", "Talonflame", "Scatterbug", "Spewpa", "Vivillon", "Litleo", "Pyroar", "Flabebe", "Floette", "Florges", "Skiddo", "Gogoat", "Pancham", "Pangoro", "Furfrou", "Espurr", "Meowstic", "Honedge", "Doublade", "Aegislash", "Spritzee", "Aromatisse", "Swirlix", "Slurpuff", "Inkay", "Malamar", "Binacle", "Barbaracle", "Skrelp", "Dragalge", "Clauncher", "Clawitzer", "Helioptile", "Heliolisk", "Tyrunt", "Tyrantrum", "Amaura", "Aurorus", "Sylveon", "Hawlucha", "Dedenne", "Carbink", "Goomy", "Sliggoo", "Sliggoo (Hisuian Form)", "Goodra", "Goodra (Hisuian Form)", "Klefki", "Phantump", "Trevenant", "Pumpkaboo", "Gourgeist", "Bergmite", "Avalugg", "Avalugg (Hisuian Form)", "Noibat", "Noivern", "Xerneas", "Yveltal", "Zygarde 10%", "Zygarde 50%", "Zygarde Cell", "Zygarde 100%", "Diancie", "Diancie (Mega Form)", "Hoopa", "Volcanion", "Rowlet", "Dartrix", "Decidueye", "Decidueye (Hisuian Form)", "Litten", "Torracat", "Incineroar", "Popplio", "Brionne", "Primarina", "Pikipek", "Trumbeak", "Toucannon", "Yungoos", "Gumshoos", "Grubbin", "Charjabug", "Vikavolt", "Crabrawler", "Crabominable", "Oricorio", "Cutiefly", "Ribombee", "Rockruff", "Lycanroc", "Wishiwashi", "Mareanie", "Toxapex", "Mudbray", "Mudsdale", "Dewpider", "Araquanid", "Fomantis", "Lurantis", "Morelull", "Shiinotic", "Salandit", "Salazzle", "Stufful", "Bewear", "Bounsweet", "Steenee", "Tsareena", "Comfey", "Oranguru", "Passimian", "Wimpod", "Golisopod", "Sandygast", "Palossand", "Pyukumuku", "Type: Null", "Silvally", "Minior", "Komala", "Turtonator", "Togedemaru", "Mimikyu", "Bruxish", "Drampa", "Dhelmise", "Jangmo-o", "Hakamo-o", "Kommo-o", "Tapu Koko", "Tapu Lele", "Tapu Bulu", "Tapu Fini", "Cosmog", "Cosmoem", "Solgaleo", "Lunala", "Nihilego", "Buzzwole", "Pheromosa", "Xurkitree", "Celesteela", "Kartana", "Guzzlord", "Necrozma", "Magearna", "Marshadow", "Poipole", "Naganadel", "Stakataka", "Blacephalon", "Zeraora", "Meltan", "Melmetal", "Grookey", "Thwackey", "Rillaboom", "Scorbunny", "Raboot", "Cinderace", "Sobble", "Drizzile", "Inteleon", "Skwovet", "Greedent", "Rookidee", "Corvisquire", "Corviknight", "Blipbug", "Dottler", "Orbeetle", "Nickit", "Thievul", "Gossifleur", "Eldegoss", "Wooloo", "Dubwool", "Chewtle", "Drednaw", "Yamper", "Boltund", "Rolycoly", "Carkol", "Coalossal", "Applin", "Flapple", "Appletun", "Silicobra", "Sandaconda", "Cramorant", "Arrokuda", "Barraskewda", "Toxel", "Toxtricity (Amped Form)", "Toxtricity (Low Key Form)", "Sizzlipede", "Centiskorch", "Clobbopus", "Grapploct", "Sinistea", "Polteageist", "Hatenna", "Hattrem", "Hatterene", "Impidimp", "Morgrem", "Grimmsnarl", "Obstagoon", "Perrserker", "Cursola", "Sirfetch'd", "Mr. Rime", "Runerigus", "Milcery", "Alcremie", "Falinks", "Pincurchin", "Snom", "Frosmoth", "Stonjourner", "Eiscue", "Indeedee", "Morpeko", "Cufant", "Copperajah", "Dracozolt", "Arctozolt", "Dracovish", "Arctovish", "Duraludon", "Dreepy", "Drakloak", "Dragapult", "Zacian", "Zamazenta", "Eternatus", "Kubfu", "Urshifu", "Zarude", "Regieleki", "Regidrago", "Glastrier", "Spectrier", "Calyrex", "Calyrex (Ice Rider Form)", "Calyrex (Shadow Rider Form)", "Wyrdeer", "Kleavor", "Ursaluna", "Basculegion (Female Form)","Basculegion (Male Form)", "Sneasler", "Overqwil", "Enamorus", "Sprigatito", "Floragato", "Meowscarada", "Fuecoco", "Crocalor", "Skeledirge", "Quaxly", "Quaxwell", "Quaquaval", "Lechonk", "Oinkologne", "Tarountula", "Spidops", "Nymble", "Lokix", "Pawmi", "Pawmo", "Pawmot", "Tandemaus", "Maushold", "Fidough", "Dachsbun", "Smoliv", "Dolliv", "Arboliva", "Squawkabilly", "Nacli", "Naclstack", "Garganacl", "Charcadet", "Armarouge", "Ceruledge", "Tadbulb", "Bellibolt", "Wattrel", "Kilowattrel", "Maschiff", "Mabosstiff", "Shroodle", "Grafaiai", "Bramblin", "Brambleghast", "Toedscool", "Toedscruel", "Klawf", "Capsakid", "Scovillain", "Rellor", "Rabsca", "Flittle", "Espathra", "Tinkatink", "Tinkatuff", "Tinkaton", "Wiglett", "Wugtrio", "Bombirdier", "Finizen", "Palafin", "Varoom", "Revavroom", "Cyclizar", "Orthworm", "Glimmet", "Glimmora", "Greavard", "Houndstone", "Flamigo", "Cetoddle", "Cetitan", "Veluza", "Dondozo", "Tatsugiri", "Annihilape", "Clodsire", "Farigiraf", "Dudunsparce", "Kingambit", "Great Tusk", "Scream Tail", "Brute Bonnet", "Flutter Mane", "Slither Wing", "Sandy Shocks", "Iron Treads", "Iron Bundle", "Iron Hands", "Iron Jugulis", "Iron Moth", "Iron Thorns", "Frigibax", "Arctibax", "Baxcalibur", "Gimmighoul", "Gholdengo", "Wo-Chien", "Chien-Pao", "Ting-Lu", "Chi-Yu", "Roaring Moon", "Iron Valiant", "Koraidon", "Miraidon", "Venusaur (Gigantamax Form)", "Charizard (Gigantamax Form)", "Blastoise (Gigantamax Form)", "Pikachu (Gigantamax Form)", "Meowth (Gigantamax Form)", "Machamp (Gigantamax Form)", "Gengar (Gigantamax Form)", "Kingler (Gigantamax Form)", "Lapras (Gigantamax Form)", "Eevee (Gigantamax Form)", "Snorlax (Gigantamax Form)", "Garbodor (Gigantamax Form)", "Toxtricity (Gigantamax Form)", "Centiskorch (Gigantamax Form)", "Hatterene (Gigantamax Form)", "Grimmsnarl (Gigantamax Form)", "Alcremie (Gigantamax Form)", "Corviknight (Gigantamax Form)", "Urshifu (Gigantamax Form)", "Sandaconda (Gigantamax Form)", "Butterfree (Gigantamax Form)", "Ogerpon (Teal Mask Form)", "Ogerpon (Wellspring Mask Form)", "Ogerpon (Hearthflame Mask Form)", "Ogerpon (Cornerstone Mask Form)", "Poltchageist (Counterfeit Form)", "Poltchageist (Artisan Form)", "Sinistcha (Unremarkable Form)", "Sinistcha (Masterpiece Form)", "Urshifu (Single Strike Style)", "Urshifu (Rapid Strike Style)", "Lycanroc (Midday Form)", "Lycanroc (Midnight Form)", "Lycanroc (Dusk Form)", "Deoxys (Normal Form)", "Deoxys (Attack Form)", "Deoxys (Defense Form)", "Deoxys (Speed Form)", "Calyrex (Ice Rider)", "Calyrex (Shadow Rider)", "Meowstic (Male)", "Meowstic (Female)", "Indeedee (Male)", "Indeedee (Female)", "Oinkologne (Male)", "Oinkologne (Female)", "Basculegion (Male)", "Basculegion (Female)", "Basculin (Red-Striped Form)", "Basculin (Blue-Striped Form)", "Basculin (White-Striped Form)", "Tatsugiri (Curly Form)", "Tatsugiri (Droopy Form)", "Tatsugiri (Stretchy Form)", "Squawkabilly (Green Plumage)", "Squawkabilly (Blue Plumage)", "Squawkabilly (Yellow Plumage)", "Squawkabilly (White Plumage)", "Rotom (Normal Form)", "Rotom (Heat Form)", "Rotom (Wash Form)", "Rotom (Frost Form)", "Rotom (Fan Form)", "Rotom (Mow Form)", "Oricorio (Baile Style)", "Oricorio (Pom-Pom Style)", "Oricorio (Pa'u Style)", "Oricorio (Sensu Style)", "Terapagos (Normal Form)", "Terapagos (Terastal Form)", "Terapagos (Stellar Form)",
 ];
+
 
 const statiPossibili = [
   { id: 'BRN', col: '#e67e22', label: '🔥 SCOTTATURA' }, { id: 'PAR', col: '#f1c40f', label: '⚡ PARALISI' },
@@ -284,74 +410,63 @@ function App() {
     }
   };
 
-  // --- MOTORE DI RICERCA IMMAGINI MIGLIORATO (ANTI-404 SU GITHUB) ---
   const renderImmagine = (tipo, nome, stile) => {
-    if (!nome) return null;
-    const cartella = tipo === 'pokemon' ? 'BookSprites' : 'Items';
-    
-    // Configura il percorso base (fondamentale per GitHub Pages)
-    const baseUrl = process.env.PUBLIC_URL || '';
-    const basePath = `${baseUrl}/data/images/${cartella}/`;
+  if (!nome) return null;
+  
+  // IL FIX PRINCIPALE È QUI: Niente più 'HomeSprites', tutto va in 'BookSprites' o 'Items'
+  const cartella = tipo === 'pokemon' ? 'BookSprites' : 'Items';
+  
+  const getUrl = (n, folder = cartella) => `${BASE_URL}/data/images/${folder}/${encodeURIComponent(n)}.png`;
 
-    // formatPokemonName trasforma "Venusaur (Mega Form)" in "Venusaur-Mega"
-    const formatPokemonName = (rawName) => {
-      let clean = rawName.replace(/\s*Form\b/gi, ''); 
-      clean = clean.replace(/\s*\(\s*/g, '-').replace(/\s*\)\s*/g, '').replace(/\s+/g, '-');
-      return clean.replace(/-+/g, '-').replace(/-$/, ''); 
-    };
-
-    // Prepara il primo nome da provare
-    const nomePulito = tipo === 'pokemon' ? formatPokemonName(nome) : nome.replace(/\s+/g, '');
-    const nomeBase = nome.split(' (')[0]; 
-
-    return (
-      <img 
-        key={nome}
-        src={`${basePath}${encodeURIComponent(nomePulito)}.png`} // 1° Tentativo: "Venusaur-Mega.png" (o "PokeBall.png")
-        alt={nome} 
-        style={stile} 
-        onError={(e) => { 
-          // Contatore dei tentativi falliti salvato sul tag img
-          const tr = parseInt(e.target.dataset.try || "0", 10);
-          e.target.dataset.try = tr + 1;
-
-          // Una vera e propria rete di salvataggio a cascata
-          switch(tr) {
-            case 0:
-              // 2° TENTATIVO (SALVAVITA LINUX): Tutto minuscolo -> "venusaur-mega.png" o "pokeball.png"
-              e.target.src = `${basePath}${encodeURIComponent(nomePulito.toLowerCase())}.png`;
-              break;
-            case 1:
-              if (tipo === 'pokemon') {
-                // 3° TENTATIVO PKM: Fallback al Pokémon Base -> "Venusaur.png"
-                e.target.src = `${basePath}${encodeURIComponent(nomeBase)}.png`;
-              } else {
-                // 3° TENTATIVO ITEM: Originale con gli spazi -> "Poke Ball.png"
-                e.target.src = `${basePath}${encodeURIComponent(nome)}.png`;
-              }
-              break;
-            case 2:
-              if (tipo === 'pokemon') {
-                // 4° TENTATIVO PKM: Fallback al Base tutto minuscolo -> "venusaur.png"
-                e.target.src = `${basePath}${encodeURIComponent(nomeBase.toLowerCase())}.png`;
-              } else {
-                // 4° TENTATIVO ITEM: Originale con gli spazi minuscolo -> "poke ball.png"
-                e.target.src = `${basePath}${encodeURIComponent(nome.toLowerCase())}.png`;
-              }
-              break;
-            case 3:
-              // 5° TENTATIVO FINALE: Prova l'estensione maiuscola (.PNG)
-              e.target.src = e.target.src.replace('.png', '.PNG');
-              break;
-            default:
-              // Se dopo 5 tentativi non l'ha trovata, nasconde l'icona rotta
-              e.target.style.display = 'none'; 
-              break;
-          }
-        }} 
-      />
-    );
-  };
+  return (
+    <img 
+      key={nome}
+      src={getUrl(nome)} // Tentativo 0: Nome originale esatto
+      alt={nome} 
+      style={stile} 
+      onError={(e) => { 
+        // Tentativo 1: Trattini MANTENENDO la parola "Form" (Es: Toxtricity-Amped-Form)
+        if (!e.target.dataset.triedDashForm) {
+          e.target.dataset.triedDashForm = "true";
+          const nDashForm = nome.replace(/\s*\(\s*/g, '-').replace(/\s*\)\s*/g, '').trim().replace(/\s+/g, '-');
+          e.target.src = getUrl(nDashForm);
+        }
+        // Tentativo 2: Trattini SENZA la parola "Form" (Es: Charizard-Mega-X o Zygarde-10%)
+        else if (!e.target.dataset.triedDashNoForm) {
+          e.target.dataset.triedDashNoForm = "true";
+          const nDashNoForm = nome.replace(/\s*Form\b/gi, '').replace(/\s*\(|\)/g, '').trim().replace(/\s+/g, '-');
+          e.target.src = getUrl(nDashNoForm);
+        } 
+        // Tentativo 3: Variante specifica Gigantamax (Es: Charizard-Gigantamax)
+        else if (!e.target.dataset.triedGmax && nome.includes('Gigantamax')) {
+          e.target.dataset.triedGmax = "true";
+          const nGmax = nome.split(' (')[0] + '-Gigantamax';
+          e.target.src = getUrl(nGmax);
+        }
+        // Tentativo 4: Tutto attaccato per gli oggetti (Es: AbilityCapsule)
+        else if (!e.target.dataset.triedClean) {
+          e.target.dataset.triedClean = "true";
+          const nClean = nome.replace(/\s*Form\b/gi, '').replace(/[\s()]+/g, '');
+          e.target.src = getUrl(nClean);
+        }
+        // Tentativo 5: Fallback di emergenza alla forma Base (Es: Charizard normale se non trova il Mega/Gmax)
+        else if (!e.target.dataset.triedBase && tipo === 'pokemon') {
+          e.target.dataset.triedBase = "true";
+          e.target.src = getUrl(nome.split(' (')[0]);
+        } 
+        // Tentativo 6: GITHUB PAGES FIX (Riprova tutto il percorso ma in minuscolo per aggirare i server Linux)
+        else if (!e.target.dataset.triedLower) {
+          e.target.dataset.triedLower = "true";
+          e.target.src = e.target.src.toLowerCase();
+        }
+        else { 
+          // Se falliscono tutti, nasconde l'icona rotta
+          e.target.style.display = 'none'; 
+        }
+      }} 
+    />
+  );
+};
 
 
   const renderTrainerSkillGroup = (title, skillsArray) => (
