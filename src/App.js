@@ -410,46 +410,59 @@ function App() {
 
    const renderImmagine = (tipo, nome, stile) => {
     if (!nome) return null;
-    
-    // Se è un pokemon va SEMPRE in BookSprites, altrimenti in Items
     const cartella = tipo === 'pokemon' ? 'BookSprites' : 'Items';
     
-    // Genera l'URL combinando la cartella e il nome del file
-    const getUrl = (n) => `${BASE_URL}/data/images/${cartella}/${encodeURIComponent(n)}.png`;
-
-    // Ripulisce il nome (es: "Venusaur (Mega Form)" -> "Venusaur-Mega")
-    const formatPokemonNameForImage = (rawName) => {
-      let clean = rawName.replace(/\s*Form\b/gi, ''); // Rimuove la parola "Form"
-      clean = clean.replace(/\s*\(\s*/g, '-').replace(/\s*\)\s*/g, '').replace(/\s+/g, '-'); // Parentesi in trattini
-      return clean.replace(/-+/g, '-').replace(/-$/, ''); // Pulisce trattini doppi/finali
+    // Funzione helper per ottenere l'URL base pulito
+    // Assicuriamoci che non ci siano doppi slash se BASE_URL è vuoto
+    const getBaseUrl = () => {
+       const url = process.env.PUBLIC_URL || '';
+       return url.endsWith('/') ? url.slice(0, -1) : url;
     };
 
-    const nomePulito = formatPokemonNameForImage(nome);
-    const urlPrimario = getUrl(nomePulito);
+    // Costruisce l'URL completo
+    const buildUrl = (nomeFile) => {
+        return `${getBaseUrl()}/data/images/${cartella}/${encodeURIComponent(nomeFile)}.png`;
+    };
+
+    // Formattiamo il nome PRIMA del primo tentativo
+    // Se è "Venusaur (Mega Form)", diventa "Venusaur-Mega"
+    const formatPokemonName = (rawName) => {
+      let clean = rawName.replace(/\s*Form\b/gi, ''); 
+      clean = clean.replace(/\s*\(\s*/g, '-').replace(/\s*\)\s*/g, '').replace(/\s+/g, '-');
+      return clean.replace(/-+/g, '-').replace(/-$/, ''); 
+    };
+
+    const nomePulito = formatPokemonName(nome);
 
     return (
       <img 
         key={nome}
-        src={urlPrimario}
+        src={buildUrl(nomePulito)} // 1° Tentativo: Nome pulito (es. Venusaur-Mega.png)
         alt={nome} 
         style={stile} 
         onError={(e) => { 
-          // GESTIONE DEGLI ERRORI (Fallbacks successivi)
+          // 2° Tentativo: Nome originale senza modifiche (es. per gli Items)
           if (!e.target.dataset.triedOriginal) {
-            // 1. Prova il nome esattamente come arriva
             e.target.dataset.triedOriginal = "true";
-            e.target.src = getUrl(nome);
-          } else if (!e.target.dataset.triedClean) {
-            // 2. Prova il nome tutto attaccato (Es: per oggetti come AbilityCapsule)
-            e.target.dataset.triedClean = "true";
-            e.target.src = getUrl(nome.replace(/[\s()]+/g, ''));
-          } else if (!e.target.dataset.triedBase && tipo === 'pokemon') {
-            // 3. Fallback d'emergenza: prova il Pokémon in forma base
+            e.target.src = buildUrl(nome);
+          } 
+          // 3° Tentativo: Tutto attaccato (es. PokeBall.png)
+          else if (!e.target.dataset.triedNoSpace) {
+            e.target.dataset.triedNoSpace = "true";
+            e.target.src = buildUrl(nome.replace(/\s/g, ''));
+          } 
+          // 4° Tentativo: Fallback alla forma base (es. Venusaur.png se fallisce la Mega)
+          else if (!e.target.dataset.triedBase && tipo === 'pokemon') {
             e.target.dataset.triedBase = "true";
-            e.target.src = getUrl(nome.split(' (')[0]);
-          } else { 
-            // 4. Se falliscono tutti, logga l'errore in console e nascondi l'icona rotta
-            console.error(`Immagine non trovata per: ${nome}. Ultimo URL tentato: ${e.target.src}`);
+            const pkmBase = nome.split(' (')[0];
+            e.target.src = buildUrl(pkmBase);
+          } 
+          // 5° Tentativo: Estensione in maiuscolo (nel caso il file server sia case sensitive)
+          else if (!e.target.dataset.triedCaps) {
+            e.target.dataset.triedCaps = "true";
+            e.target.src = e.target.src.replace('.png', '.PNG');
+          }
+          else {
             e.target.style.display = 'none'; 
           }
         }} 
