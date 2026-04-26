@@ -20,7 +20,7 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 
 // --- FIX PERCORSO (LOCALE VS ONLINE) ---
-const BASE_URL = window.location.hostname.includes("localhost") ? "" : "/pokerole-cloud";
+const BASE_URL = process.env.NODE_ENV === 'development' ? '' : (process.env.PUBLIC_URL || '');
 
 // --- COLORI E DIZIONARI UFFICIALI ---
 const typeColors = {
@@ -411,52 +411,45 @@ function App() {
    const renderImmagine = (tipo, nome, stile) => {
     if (!nome) return null;
     
-    // Capisce se è un Gigamax per cercare nella cartella giusta
-    const isGmax = nome.toLowerCase().includes("gigantamax");
-    const cartella = isGmax ? 'HomeSprites' : (tipo === 'pokemon' ? 'BookSprites' : 'Items');
+    // Se è un pokemon va SEMPRE in BookSprites, altrimenti in Items
+    const cartella = tipo === 'pokemon' ? 'BookSprites' : 'Items';
     
-    // Assicurati che BASE_URL sia corretto (puoi anche forzarlo a vuoto se sei in locale)
-    const baseUrlSafe = BASE_URL || ''; 
+    // Genera l'URL combinando la cartella e il nome del file
+    const getUrl = (n) => `${BASE_URL}/data/images/${cartella}/${encodeURIComponent(n)}.png`;
 
-    const getUrl = (n, folder = cartella) => `${baseUrlSafe}/data/images/${folder}/${encodeURIComponent(n)}.png`;
-
-    // Funzione helper per pulire il nome del Pokémon
+    // Ripulisce il nome (es: "Venusaur (Mega Form)" -> "Venusaur-Mega")
     const formatPokemonNameForImage = (rawName) => {
-      // 1. Rimuove la parola "Form" dentro le parentesi
-      let clean = rawName.replace(/\s*Form\b/gi, '');
-      // 2. Sostituisce gli spazi con i trattini, rimuove le parentesi
-      clean = clean.replace(/\s*\(\s*/g, '-').replace(/\s*\)\s*/g, '').replace(/\s+/g, '-');
-      // 3. Rimuove eventuali trattini doppi o alla fine
-      return clean.replace(/-+/g, '-').replace(/-$/, '');
+      let clean = rawName.replace(/\s*Form\b/gi, ''); // Rimuove la parola "Form"
+      clean = clean.replace(/\s*\(\s*/g, '-').replace(/\s*\)\s*/g, '').replace(/\s+/g, '-'); // Parentesi in trattini
+      return clean.replace(/-+/g, '-').replace(/-$/, ''); // Pulisce trattini doppi/finali
     };
 
     const nomePulito = formatPokemonNameForImage(nome);
+    const urlPrimario = getUrl(nomePulito);
 
     return (
       <img 
         key={nome}
-        src={getUrl(nomePulito)} // Primo tentativo: Nome formattato
+        src={urlPrimario}
         alt={nome} 
         style={stile} 
         onError={(e) => { 
-          // Se fallisce il nome formattato, prova il nome originale esatto
+          // GESTIONE DEGLI ERRORI (Fallbacks successivi)
           if (!e.target.dataset.triedOriginal) {
+            // 1. Prova il nome esattamente come arriva
             e.target.dataset.triedOriginal = "true";
             e.target.src = getUrl(nome);
-          }
-          // Tentativo 3: Tutto attaccato per gli oggetti (Es: AbilityCapsule)
-          else if (!e.target.dataset.triedClean) {
+          } else if (!e.target.dataset.triedClean) {
+            // 2. Prova il nome tutto attaccato (Es: per oggetti come AbilityCapsule)
             e.target.dataset.triedClean = "true";
-            const nClean = nome.replace(/[\s()]+/g, '');
-            e.target.src = getUrl(nClean);
-          }
-          // Fallback di emergenza alla forma Base (Es: Charizard normale)
-          else if (!e.target.dataset.triedBase && tipo === 'pokemon') {
+            e.target.src = getUrl(nome.replace(/[\s()]+/g, ''));
+          } else if (!e.target.dataset.triedBase && tipo === 'pokemon') {
+            // 3. Fallback d'emergenza: prova il Pokémon in forma base
             e.target.dataset.triedBase = "true";
             e.target.src = getUrl(nome.split(' (')[0]);
-          } 
-          else { 
-            // Se falliscono tutti, nasconde l'icona rotta
+          } else { 
+            // 4. Se falliscono tutti, logga l'errore in console e nascondi l'icona rotta
+            console.error(`Immagine non trovata per: ${nome}. Ultimo URL tentato: ${e.target.src}`);
             e.target.style.display = 'none'; 
           }
         }} 
