@@ -19,8 +19,6 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// Rimosso BASE_URL. Useremo percorsi assoluti partendo dalla root di "public".
-
 // --- COLORI E DIZIONARI UFFICIALI ---
 const typeColors = {
   Normal: '#A8A77A', Fire: '#EE8130', Water: '#6390F0', Electric: '#F7D02C',
@@ -286,65 +284,74 @@ function App() {
     }
   };
 
+  // --- MOTORE DI RICERCA IMMAGINI MIGLIORATO (ANTI-404 SU GITHUB) ---
+  const renderImmagine = (tipo, nome, stile) => {
+    if (!nome) return null;
+    const cartella = tipo === 'pokemon' ? 'BookSprites' : 'Items';
+    
+    // Configura il percorso base (fondamentale per GitHub Pages)
+    const baseUrl = process.env.PUBLIC_URL || '';
+    const basePath = `${baseUrl}/data/images/${cartella}/`;
 
-// NUOVA VERSIONE renderImmagine
-const renderImmagine = (tipo, nome, stile) => {
-  if (!nome) return null;
-  const cartella = tipo === 'pokemon' ? 'BookSprites' : 'Items';
-  
-  // Utilizziamo un percorso relativo standard.
-  // Assicurati che PUBLIC_URL termini con o senza slash in modo coerente.
-  const baseUrl = process.env.PUBLIC_URL || '';
-  const basePath = `${baseUrl}/data/images/${cartella}/`;
+    // formatPokemonName trasforma "Venusaur (Mega Form)" in "Venusaur-Mega"
+    const formatPokemonName = (rawName) => {
+      let clean = rawName.replace(/\s*Form\b/gi, ''); 
+      clean = clean.replace(/\s*\(\s*/g, '-').replace(/\s*\)\s*/g, '').replace(/\s+/g, '-');
+      return clean.replace(/-+/g, '-').replace(/-$/, ''); 
+    };
 
-  // Costruiamo l'URL
-  const buildUrl = (nomeFile) => `${basePath}${encodeURIComponent(nomeFile)}.png`;
+    // Prepara il primo nome da provare
+    const nomePulito = tipo === 'pokemon' ? formatPokemonName(nome) : nome.replace(/\s+/g, '');
+    const nomeBase = nome.split(' (')[0]; 
 
-  // Pulizia del nome (es: "Venusaur (Mega Form)" -> "Venusaur-Mega")
-  const formatPokemonName = (rawName) => {
-    let clean = rawName.replace(/\s*Form\b/gi, ''); 
-    clean = clean.replace(/\s*\(\s*/g, '-').replace(/\s*\)\s*/g, '').replace(/\s+/g, '-');
-    return clean.replace(/-+/g, '-').replace(/-$/, ''); 
+    return (
+      <img 
+        key={nome}
+        src={`${basePath}${encodeURIComponent(nomePulito)}.png`} // 1° Tentativo: "Venusaur-Mega.png" (o "PokeBall.png")
+        alt={nome} 
+        style={stile} 
+        onError={(e) => { 
+          // Contatore dei tentativi falliti salvato sul tag img
+          const tr = parseInt(e.target.dataset.try || "0", 10);
+          e.target.dataset.try = tr + 1;
+
+          // Una vera e propria rete di salvataggio a cascata
+          switch(tr) {
+            case 0:
+              // 2° TENTATIVO (SALVAVITA LINUX): Tutto minuscolo -> "venusaur-mega.png" o "pokeball.png"
+              e.target.src = `${basePath}${encodeURIComponent(nomePulito.toLowerCase())}.png`;
+              break;
+            case 1:
+              if (tipo === 'pokemon') {
+                // 3° TENTATIVO PKM: Fallback al Pokémon Base -> "Venusaur.png"
+                e.target.src = `${basePath}${encodeURIComponent(nomeBase)}.png`;
+              } else {
+                // 3° TENTATIVO ITEM: Originale con gli spazi -> "Poke Ball.png"
+                e.target.src = `${basePath}${encodeURIComponent(nome)}.png`;
+              }
+              break;
+            case 2:
+              if (tipo === 'pokemon') {
+                // 4° TENTATIVO PKM: Fallback al Base tutto minuscolo -> "venusaur.png"
+                e.target.src = `${basePath}${encodeURIComponent(nomeBase.toLowerCase())}.png`;
+              } else {
+                // 4° TENTATIVO ITEM: Originale con gli spazi minuscolo -> "poke ball.png"
+                e.target.src = `${basePath}${encodeURIComponent(nome.toLowerCase())}.png`;
+              }
+              break;
+            case 3:
+              // 5° TENTATIVO FINALE: Prova l'estensione maiuscola (.PNG)
+              e.target.src = e.target.src.replace('.png', '.PNG');
+              break;
+            default:
+              // Se dopo 5 tentativi non l'ha trovata, nasconde l'icona rotta
+              e.target.style.display = 'none'; 
+              break;
+          }
+        }} 
+      />
+    );
   };
-
-  // 1° Tentativo: Nome pulito
-  const nomePulito = formatPokemonName(nome);
-
-  return (
-    <img 
-      key={nome}
-      src={buildUrl(nomePulito)} 
-      alt={nome} 
-      style={stile} 
-      onError={(e) => { 
-        // 2° Tentativo: Nome originale
-        if (!e.target.dataset.triedOriginal) {
-          e.target.dataset.triedOriginal = "true";
-          e.target.src = buildUrl(nome);
-        } 
-        // 3° Tentativo: Tutto attaccato
-        else if (!e.target.dataset.triedNoSpace) {
-          e.target.dataset.triedNoSpace = "true";
-          e.target.src = buildUrl(nome.replace(/\s/g, ''));
-        } 
-        // 4° Tentativo: Fallback alla forma base
-        else if (!e.target.dataset.triedBase && tipo === 'pokemon') {
-          e.target.dataset.triedBase = "true";
-          const pkmBase = nome.split(' (')[0];
-          e.target.src = buildUrl(pkmBase);
-        } 
-        // 5° Tentativo: Estensione .PNG maiuscola
-        else if (!e.target.dataset.triedCaps) {
-          e.target.dataset.triedCaps = "true";
-          e.target.src = e.target.src.replace('.png', '.PNG');
-        }
-        else {
-          e.target.style.display = 'none'; 
-        }
-      }} 
-    />
-  );
-};
 
 
   const renderTrainerSkillGroup = (title, skillsArray) => (
@@ -460,33 +467,28 @@ const renderImmagine = (tipo, nome, stile) => {
                   <button onClick={() => { if(itemSelezionato) { aggiungiZaino(itemSelezionato); setItemSelezionato(""); } }} style={styles.btnCercaMini}> + </button>
                 </div>
                 {zaino.map((item, i) => (
-  <div key={i} style={styles.sheetItemRow}>
-    {/* Immagine Oggetto con box dedicato */}
-    <div style={styles.imgContainer}>
-      {renderImmagine('item', item.Name, styles.itemImage)}
-    </div>
-    
-    <div style={{flex: 1, marginLeft: 15}}>
-      <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
-        <strong style={{color: '#fff', fontSize: '16px'}}>{item.customName || tItem(item.Name)}</strong>
-        <div style={{display: 'flex', alignItems: 'center', gap: 10}}>
-          <input type="number" value={item.qty} style={styles.sheetMiniInput} onChange={e => { const n = [...zaino]; n[i].qty = parseInt(e.target.value); setZaino(n); }} />
-          <button onClick={() => rimuoviDalloZaino(i)} style={{background: 'none', border: 'none', cursor: 'pointer'}}>❌</button>
-        </div>
-      </div>
-      
-      {/* Testo narrativo */}
-      <div style={{fontSize: '12px', color: '#aaa', fontStyle: 'italic', marginTop: '3px'}}>{item.Description}</div>
-      
-      {/* BOX EFFETTO MECCANICO (Priorità Master) */}
-      {item.Effect && (
-        <div style={styles.effectBox}>
-          <strong>EFFETTO:</strong> {item.Effect}
-        </div>
-      )}
-    </div>
-  </div>
-))}
+                  <div key={i} style={styles.sheetItemRow}>
+                    <div style={styles.imgContainer}>
+                      {renderImmagine('item', item.Name, styles.itemImage)}
+                    </div>
+                    
+                    <div style={{flex: 1, marginLeft: 15}}>
+                      <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+                        <strong style={{color: '#fff', fontSize: '16px'}}>{item.customName || tItem(item.Name)}</strong>
+                        <div style={{display: 'flex', alignItems: 'center', gap: 10}}>
+                          <input type="number" value={item.qty} style={styles.sheetMiniInput} onChange={e => { const n = [...zaino]; n[i].qty = parseInt(e.target.value); setZaino(n); }} />
+                          <button onClick={() => rimuoviDalloZaino(i)} style={{background: 'none', border: 'none', cursor: 'pointer'}}>❌</button>
+                        </div>
+                      </div>
+                      <div style={{fontSize: '12px', color: '#aaa', fontStyle: 'italic', marginTop: '3px'}}>{item.Description}</div>
+                      {item.Effect && (
+                        <div style={styles.effectBox}>
+                          <strong>EFFETTO:</strong> {item.Effect}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
@@ -504,16 +506,15 @@ const renderImmagine = (tipo, nome, stile) => {
                   <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '10px', minWidth: '250px' }}>
                     <div style={styles.sheetGridRow}>
                       <div style={{...styles.sheetInputBox, flex: 2}}>
-  <label style={styles.sheetLabel}>NOME</label>
-  <input style={styles.sheetInput} value={tNomePkm(p.Name)} readOnly />
-  {/* --- BADGE DEI TIPI RIPRISTINATI --- */}
-  <div style={{display: 'flex', gap: '5px', marginTop: '5px'}}>
-    <span style={{...styles.typeBadge, backgroundColor: typeColors[p.Type1]}}>{tradTipi[p.Type1]}</span>
-    {p.Type2 && p.Type2 !== "None" && (
-      <span style={{...styles.typeBadge, backgroundColor: typeColors[p.Type2]}}>{tradTipi[p.Type2]}</span>
-    )}
-  </div>
-</div>
+                        <label style={styles.sheetLabel}>NOME</label>
+                        <input style={styles.sheetInput} value={tNomePkm(p.Name)} readOnly />
+                        <div style={{display: 'flex', gap: '5px', marginTop: '5px'}}>
+                          <span style={{...styles.typeBadge, backgroundColor: typeColors[p.Type1]}}>{tradTipi[p.Type1]}</span>
+                          {p.Type2 && p.Type2 !== "None" && (
+                            <span style={{...styles.typeBadge, backgroundColor: typeColors[p.Type2]}}>{tradTipi[p.Type2]}</span>
+                          )}
+                        </div>
+                      </div>
                       {p.availableForms && p.availableForms.length > 1 && (
                         <div style={{...styles.sheetInputBox, flex: 1.5}}>
                           <label style={styles.sheetLabel}>FORMA</label>
@@ -615,8 +616,8 @@ const renderImmagine = (tipo, nome, stile) => {
             <button onClick={cercaPokemon} style={styles.btnCerca}>CERCA</button>
             {pkmTrovato && (
               <div style={styles.card}>
-                <div style={{backgroundColor:'#222', borderRadius:20, padding:15, display:'inline-block'}}>{renderImmagine('pokemon', pkmTrovato.Name, {width: 130})}</div>
-                <h2 style={{color: '#fff'}}>{tNomePkm(pkmTrovato.Name)}</h2>
+                <div style={{backgroundColor:'#222', borderRadius:20, padding:15, display:'inline-block'}}>{renderImmagine('pokemon', pkmTrovato.currentForm || pkmTrovato.Name, {width: 130})}</div>
+                <h2 style={{color: '#fff'}}>{tNomePkm(pkmTrovato.currentForm || pkmTrovato.Name)}</h2>
                 <button onClick={aggiungiASquadra} style={styles.btnSuccess}>AGGIUNGI AL TEAM</button>
               </div>
             )}
@@ -658,7 +659,7 @@ const styles = {
   card: { backgroundColor: '#1f1f1f', padding: '20px', borderRadius: '20px', marginTop: 15 },
   btnCercaMini: { backgroundColor: '#ff4757', color: '#fff', border: 'none', borderRadius: '8px', padding: '8px 15px', fontWeight: 'bold', cursor: 'pointer' },
   searchBar: { flex: 1, padding: '10px', borderRadius: '8px', border: '1px solid #444', backgroundColor: '#111', color: '#fff', minWidth: '150px' },
-typeBadge: {
+  typeBadge: {
     fontSize: '10px',
     padding: '2px 8px',
     borderRadius: '4px',
@@ -667,7 +668,9 @@ typeBadge: {
     textTransform: 'uppercase'
   },
   statusBtn: { padding: '5px 10px', borderRadius: '8px', fontSize: '10px', fontWeight: 'bold', color: '#fff', border: 'none' },
-  btnDeletePiccolo: { background: 'none', border: 'none', cursor: 'pointer' }
+  btnDeletePiccolo: { background: 'none', border: 'none', cursor: 'pointer' },
+  imgContainer: { width: '50px', height: '50px', display: 'flex', justifyContent: 'center', alignItems: 'center' },
+  effectBox: { backgroundColor: '#333', padding: '5px', borderRadius: '5px', marginTop: '5px', fontSize: '11px', color: '#ddd' }
 };
 
 export default App;
