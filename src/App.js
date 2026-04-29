@@ -453,31 +453,48 @@ function App() {
     
     const cartella = tipo === 'pokemon' ? 'BookSprites' : 'Items';
     
-    // Questa funzione trasforma "Abomasnow (Mega Form)" in "abomasnow-mega-form"
+    // Funzione di pulizia super-avanzata
     const formattaNomeFile = (n) => {
       return n
-        .toLowerCase() // Trasforma tutto in minuscolo
-        .replace(/[()'.:]/g, '') // Rimuove parentesi, apostrofi, punti e due punti
-        .replace(/\s+/g, '-') // Sostituisce tutti gli spazi con dei trattini
-        .replace(/-+/g, '-') // Evita che si formino doppi trattini
-        .replace(/^-|-$/g, ''); // Pulisce eventuali trattini all'inizio o alla fine
+        .toLowerCase()
+        .replace(/%/g, '') // Rimuove il simbolo % (Zygarde 10% diventa zygarde-10)
+        .replace(/[()'.:]/g, '')
+        .replace(/\s+/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '');
     };
 
-    // Applichiamo la formattazione solo se è un Pokémon (lasciamo gli oggetti come sono se già funzionavano)
     const nomeFormattato = tipo === 'pokemon' ? formattaNomeFile(nome) : nome;
     
+    // Questa funzione crea il link dell'immagine
     const getUrl = (n, folder = cartella) => `${BASE_URL}/data/images/${folder}/${encodeURIComponent(n)}.png`;
 
     return (
       <img 
         key={nomeFormattato}
-        src={getUrl(nomeFormattato)}
+        src={getUrl(nomeFormattato)} // Tentativo 1: Nome completo formattato
         alt={nome} 
         style={stile} 
         onError={(e) => { 
-          // Se anche così fallisce, nasconde l'icona rotta e ci avvisa in console
+          if (tipo === 'pokemon') {
+            // Tentativo 2: Proviamo a togliere "-form" (Risolve il problema dei Gigantamax!)
+            if (!e.target.dataset.triedNoForm && nomeFormattato.includes('-form')) {
+              e.target.dataset.triedNoForm = "true";
+              e.target.src = getUrl(nomeFormattato.replace('-form', ''));
+              return; // Esce e riprova a caricare
+            }
+            // Tentativo 3: Nome base (Se Zygarde-10 fallisce, carica Zygarde base)
+            if (!e.target.dataset.triedBase) {
+              e.target.dataset.triedBase = "true";
+              const nomeBase = formattaNomeFile(nome.split(' (')[0]); 
+              e.target.src = getUrl(nomeBase);
+              return; // Esce e riprova a caricare
+            }
+          }
+          
+          // Se falliscono TUTTI i tentativi, nasconde l'icona
           e.target.style.display = 'none'; 
-          console.error(`Immagine non trovata: ${e.target.src}`);
+          console.error(`❌ Immagine introvabile per: ${nome}. Ultimo URL provato: ${e.target.src}`);
         }} 
       />
     );
