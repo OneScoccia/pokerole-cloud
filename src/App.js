@@ -451,48 +451,45 @@ function App() {
   const renderImmagine = (tipo, nome, stile) => {
     if (!nome) return null;
     
-    const cartella = tipo === 'pokemon' ? 'BookSprites' : 'Items';
+    // CORREZIONE 1: La cartella per gli oggetti si chiama 'ItemSprites'
+    const cartella = tipo === 'pokemon' ? 'BookSprites' : 'ItemSprites';
     
-    // Funzione di pulizia super-avanzata
     const formattaNomeFile = (n) => {
       return n
         .toLowerCase()
-        .replace(/%/g, '') // Rimuove il simbolo % (Zygarde 10% diventa zygarde-10)
+        .replace(/%/g, '')
         .replace(/[()'.:]/g, '')
         .replace(/\s+/g, '-')
         .replace(/-+/g, '-')
         .replace(/^-|-$/g, '');
     };
 
-    const nomeFormattato = tipo === 'pokemon' ? formattaNomeFile(nome) : nome;
+    // CORREZIONE 2: Ora applichiamo la formattazione a TUTTI i nomi, anche agli oggetti!
+    const nomeFormattato = formattaNomeFile(nome); 
     
-    // Questa funzione crea il link dell'immagine
     const getUrl = (n, folder = cartella) => `${BASE_URL}/data/images/${folder}/${encodeURIComponent(n)}.png`;
 
     return (
       <img 
         key={nomeFormattato}
-        src={getUrl(nomeFormattato)} // Tentativo 1: Nome completo formattato
+        src={getUrl(nomeFormattato)}
         alt={nome} 
         style={stile} 
         onError={(e) => { 
           if (tipo === 'pokemon') {
-            // Tentativo 2: Proviamo a togliere "-form" (Risolve il problema dei Gigantamax!)
             if (!e.target.dataset.triedNoForm && nomeFormattato.includes('-form')) {
               e.target.dataset.triedNoForm = "true";
               e.target.src = getUrl(nomeFormattato.replace('-form', ''));
-              return; // Esce e riprova a caricare
+              return; 
             }
-            // Tentativo 3: Nome base (Se Zygarde-10 fallisce, carica Zygarde base)
             if (!e.target.dataset.triedBase) {
               e.target.dataset.triedBase = "true";
               const nomeBase = formattaNomeFile(nome.split(' (')[0]); 
               e.target.src = getUrl(nomeBase);
-              return; // Esce e riprova a caricare
+              return; 
             }
           }
           
-          // Se falliscono TUTTI i tentativi, nasconde l'icona
           e.target.style.display = 'none'; 
           console.error(`❌ Immagine introvabile per: ${nome}. Ultimo URL provato: ${e.target.src}`);
         }} 
