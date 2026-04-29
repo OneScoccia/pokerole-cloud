@@ -38,7 +38,42 @@ const tradTipi = {
   Steel: 'Acciaio', Fairy: 'Folletto', None: 'Nessuno'
 };
 
+const typeEfficacia = {
+  Normal: { Fighting: 2, Ghost: 0 },
+  Fire: { Fire: 0.5, Water: 2, Grass: 0.5, Ice: 0.5, Ground: 2, Bug: 0.5, Rock: 2, Steel: 0.5, Fairy: 0.5 },
+  Water: { Fire: 0.5, Water: 0.5, Electric: 2, Grass: 2, Ice: 0.5, Steel: 0.5 },
+  Electric: { Electric: 0.5, Ground: 2, Flying: 0.5, Steel: 0.5 },
+  Grass: { Fire: 2, Water: 0.5, Electric: 0.5, Grass: 0.5, Ice: 2, Poison: 2, Ground: 0.5, Flying: 2, Bug: 2 },
+  Ice: { Fire: 2, Ice: 0.5, Fighting: 2, Rock: 2, Steel: 2 },
+  Fighting: { Flying: 2, Psychic: 2, Bug: 0.5, Rock: 0.5, Dark: 0.5, Fairy: 2 },
+  Poison: { Grass: 0.5, Fighting: 0.5, Poison: 0.5, Ground: 2, Bug: 0.5, Psychic: 2, Fairy: 0.5 },
+  Ground: { Water: 2, Electric: 0, Grass: 2, Ice: 2, Poison: 0.5, Rock: 0.5 },
+  Flying: { Electric: 2, Grass: 0.5, Fighting: 0.5, Ground: 0, Bug: 0.5, Rock: 2 },
+  Psychic: { Fighting: 0.5, Psychic: 0.5, Bug: 2, Ghost: 2, Dark: 2 },
+  Bug: { Fire: 2, Grass: 0.5, Fighting: 0.5, Ground: 0.5, Flying: 2, Rock: 2 },
+  Rock: { Normal: 0.5, Fire: 0.5, Water: 2, Grass: 2, Fighting: 2, Poison: 0.5, Ground: 2, Flying: 0.5, Steel: 2 },
+  Ghost: { Normal: 0, Fighting: 0, Poison: 0.5, Bug: 0.5, Ghost: 2, Dark: 2 },
+  Dragon: { Fire: 0.5, Water: 0.5, Electric: 0.5, Grass: 0.5, Ice: 2, Dragon: 2, Fairy: 2 },
+  Dark: { Fighting: 2, Bug: 2, Ghost: 0.5, Psychic: 0, Dark: 0.5, Fairy: 2 },
+  Steel: { Normal: 0.5, Fire: 2, Water: 1, Electric: 1, Grass: 0.5, Ice: 0.5, Fighting: 2, Poison: 0, Ground: 2, Flying: 0.5, Psychic: 0.5, Bug: 0.5, Rock: 0.5, Dragon: 0.5, Steel: 0.5, Fairy: 0.5 },
+  Fairy: { Fighting: 0.5, Poison: 2, Bug: 0.5, Dragon: 0, Dark: 0.5, Steel: 2 }
+};
+
 const tradStats = { Strength: 'FORZA', Dexterity: 'DESTREZZA', Vitality: 'VITALITÀ', Special: 'SPECIALE', Insight: 'ACUME' };
+
+const rankList = ["Starter", "Beginner", "Amateur", "Ace", "Pro", "Master", "Champion"];
+
+// Uniamo i nomi dei ranghi Allenatore e i nomi dei ranghi Mosse in un'unica scala numerica
+const rankValues = { 
+  "Starter": 0, 
+  "Beginner": 1, "Rookie": 1, 
+  "Amateur": 2, "Standard": 2, 
+  "Advanced": 3, 
+  "Pro": 4, "Expert": 4, 
+  "Ace": 5, 
+  "Master": 6, 
+  "Champion": 7 
+};
 
 const tradTrainerSkills = {
   Brawl: 'Rissa', Throw: 'Lancio', Evasion: 'Evasione', Weapons: 'Armi',
@@ -215,6 +250,25 @@ const tNomePkm = (nome) => {
              .replace('(Paldean Form)', '(Forma di Paldea)');
 };
 
+const calcolaDebRes = (t1, t2) => {
+  const tuttiTipi = Object.keys(tradTipi).filter(t => t !== 'None');
+  let molts = {};
+  tuttiTipi.forEach(t => molts[t] = 1);
+
+  if (t1 && typeEfficacia[t1]) {
+    Object.entries(typeEfficacia[t1]).forEach(([atk, val]) => molts[atk] *= val);
+  }
+  if (t2 && t2 !== "None" && typeEfficacia[t2]) {
+    Object.entries(typeEfficacia[t2]).forEach(([atk, val]) => molts[atk] *= val);
+  }
+
+  let res = { 4: [], 2: [], 0.5: [], 0.25: [], 0: [] };
+  Object.entries(molts).forEach(([atk, val]) => {
+    if (res[val]) res[val].push(atk);
+  });
+  return res;
+};
+
 const tCatMosse = (cat) => cat === 'Physical' ? 'Fisico' : cat === 'Special' ? 'Speciale' : 'Supporto';
 const tItem = (engName) => tradStrumentiEngToIta[engName] || engName;
 const tMossa = (engName) => tradMosseEngToIta[engName] || engName;
@@ -277,12 +331,14 @@ function App() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [authError, setAuthError] = useState("");
+  const [diceLog, setDiceLog] = useState([]);
 
   const [tab, setTab] = useState("trainer"); 
   const [ricerca, setRicerca] = useState("");
   const [pkmTrovato, setPkmTrovato] = useState(null);
   const [squadra, setSquadra] = useState([]);
   const [dettagliMosse, setDettagliMosse] = useState({});
+  const [dettagliAbilita, setDettagliAbilita] = useState({});
   const [zaino, setZaino] = useState([]);
   const [itemSelezionato, setItemSelezionato] = useState("");
 
@@ -342,6 +398,29 @@ function App() {
     }
   };
 
+  const curaTuttaLaSquadra = () => {
+    const conferma = window.confirm("🏥 Vuoi curare tutto (Allenatore e Squadra)?");
+    if (!conferma) return;
+
+    // Cura Allenatore
+    setTrainer({
+      ...trainer,
+      currentHP: trainer.stats.Vitality,
+      currentWill: trainer.stats.Insight + 2
+    });
+
+    // Cura Squadra
+    const squadraCurata = squadra.map(p => ({
+      ...p,
+      curHP: p.Vitality,
+      curWill: p.Insight + 2,
+      activeStatus: []
+    }));
+
+    setSquadra(squadraCurata);
+    alert("✨ Centro Pokémon: Ripristino completato!");
+  };
+
   const fetchData = async (folder, name) => {
     try {
       const url = process.env.PUBLIC_URL ? `${process.env.PUBLIC_URL}/data/${folder}/${encodeURIComponent(name)}.json` : `/data/${folder}/${encodeURIComponent(name)}.json`;
@@ -359,7 +438,17 @@ function App() {
       tiri.push(d);
       if (d >= 4) successi++;
     }
-    alert(`🎲 Lancio: ${nomeTradotto.toUpperCase()}\nDadi tirati: ${numero}\nRisultati: [${tiri.join(", ")}]\n✨ SUCCESSI: ${successi}`);
+
+    const nuovoTiro = {
+      id: Date.now(),
+      nome: nomeTradotto.toUpperCase(),
+      dadi: tiri,
+      successi: successi,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+    };
+
+    // Teniamo solo gli ultimi 5 tiri nel log
+    setDiceLog(prev => [nuovoTiro, ...prev].slice(0, 5));
   };
 
   const cercaPokemon = async () => {
@@ -378,6 +467,13 @@ function App() {
       pkm.Moves.forEach(async (m) => {
         const moveData = await fetchData('Moves', m.Name);
         if (moveData) setDettagliMosse(prev => ({ ...prev, [m.Name]: moveData }));
+      });
+      // Scarica i file JSON delle Abilità di questo Pokémon
+      [pkm.Ability1, pkm.Ability2, pkm.HiddenAbility].forEach(async (abName) => {
+        if (abName && abName !== "None") {
+          const abData = await fetchData('Abilities', abName);
+          if (abData) setDettagliAbilita(prev => ({ ...prev, [abName]: abData }));
+        }
       });
       const nomeBase = pkm.Name.split(' (')[0];
       pkm.availableForms = listaPokemon.filter(p => p === nomeBase || p.startsWith(nomeBase + " ("));
@@ -410,6 +506,7 @@ function App() {
       setSquadra([...squadra, { 
         ...pkmTrovato, id: Date.now(), curHP: pkmTrovato.Vitality, curWill: pkmTrovato.Insight + 2,
         selectedMoves: ["", "", "", ""], activeStatus: [], heldItem: null, currentForm: pkmTrovato.Name,
+        selectedAbility: pkmTrovato.Ability1, // Impostiamo la prima abilità di default
         pkmSkills: { Brawl: 1, Channel: 1, Clash: 1, Evasion: 1, Alert: 1, Athletic: 1, Nature: 1, Stealth: 1, Allure: 1, Etiquette: 1, Intimidate: 1, Perform: 1 }
       }]);
       setPkmTrovato(null); setTab("squadra");
@@ -557,6 +654,9 @@ function App() {
         <button onClick={() => setTab("squadra")} style={tab === "squadra" ? styles.navActive : styles.navBtn}>🎒 SQUADRA ({squadra.length})</button>
         <button onClick={() => setTab("pokedex")} style={tab === "pokedex" ? styles.navActive : styles.navBtn}>🔍 POKÉDEX</button>
         <div style={{flex: 1, display: 'flex', justifyContent: 'flex-end', padding: '10px', gap: '10px'}}>
+          {/* NUOVO TASTO CENTRO POKEMON */}
+          <button onClick={curaTuttaLaSquadra} style={{...styles.btnSuccess, backgroundColor: '#eb4d4b', padding: '10px', width: 'auto', marginTop: 0, fontSize: '14px'}}>🏥 CURA</button>
+          
           <button onClick={salvaSulCloud} style={{...styles.btnSuccess, padding: '10px', width: 'auto', marginTop: 0, fontSize: '14px'}}>☁️ SALVA</button>
           <button onClick={() => signOut(auth)} style={{...styles.btnDelPkm, padding: '10px'}}>ESCI</button>
         </div>
@@ -570,17 +670,62 @@ function App() {
             </div>
             <div style={styles.sheetGridRow}>
               <div style={styles.sheetInputBox}><label style={styles.sheetLabel}>NOME</label><input style={styles.sheetInput} value={trainer.nome} onChange={e => setTrainer({...trainer, nome: e.target.value})} /></div>
-              <div style={styles.sheetInputBox}><label style={styles.sheetLabel}>RANGO</label><input style={styles.sheetInput} value={trainer.rango} onChange={e => setTrainer({...trainer, rango: e.target.value})} /></div>
+              <div style={styles.sheetInputBox}>
+                <label style={styles.sheetLabel}>RANGO</label>
+                <select style={{...styles.sheetInput, backgroundColor: '#252525', width: '100%', cursor: 'pointer'}} value={trainer.rango || "Starter"} onChange={e => setTrainer({...trainer, rango: e.target.value})}>
+                  {rankList.map(r => <option key={r} value={r}>{r}</option>)}
+                </select>
+              </div>
               <div style={styles.sheetInputBox}><label style={styles.sheetLabel}>SOLDI</label><input type="number" style={styles.sheetInput} value={trainer.money} onChange={e => setTrainer({...trainer, money: e.target.value})} /></div>
             </div>
-            <div style={{...styles.sheetGridRow, marginTop: '15px'}}>
+            {/* PARAMETRI VITALI ALLENATORE */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 150px), 1fr))', gap: '10px', marginTop: '15px' }}>
               <div style={{...styles.sheetInputBox, backgroundColor: '#2d1b1b', borderColor: '#ff4757'}}>
-                <label style={{...styles.sheetLabel, color: '#ff4757'}}>PS</label>
-                <input type="number" style={{...styles.sheetInput, color: '#ff4757', textAlign: 'center', fontSize: '24px'}} value={trainer.currentHP} onChange={e => setTrainer({...trainer, currentHP: e.target.value})} />
+                <label style={{...styles.sheetLabel, color: '#ff4757', textAlign: 'center'}}>PUNTI SALUTE</label>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '15px', marginTop: '5px' }}>
+                  <button onClick={() => setTrainer({...trainer, currentHP: Math.max(0, trainer.currentHP - 1)})} style={styles.btnCircleMin}>-</button>
+                  <span style={{ fontSize: '22px', color: '#ff4757', fontWeight: 'bold' }}>{trainer.currentHP} / {trainer.stats.Vitality}</span>
+                  <button onClick={() => setTrainer({...trainer, currentHP: trainer.currentHP + 1})} style={styles.btnCircleMin}>+</button>
+                </div>
               </div>
+
               <div style={{...styles.sheetInputBox, backgroundColor: '#1b2d2d', borderColor: '#4bcffa'}}>
-                <label style={{...styles.sheetLabel, color: '#4bcffa'}}>VOLONTÀ</label>
-                <input type="number" style={{...styles.sheetInput, color: '#4bcffa', textAlign: 'center', fontSize: '24px'}} value={trainer.currentWill} onChange={e => setTrainer({...trainer, currentWill: e.target.value})} />
+                <label style={{...styles.sheetLabel, color: '#4bcffa', textAlign: 'center'}}>VOLONTÀ</label>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '15px', marginTop: '5px' }}>
+                  <button onClick={() => setTrainer({...trainer, currentWill: Math.max(0, trainer.currentWill - 1)})} style={styles.btnCircleMinBlue}>-</button>
+                  <span style={{ fontSize: '22px', color: '#4bcffa', fontWeight: 'bold' }}>{trainer.currentWill} / {trainer.stats.Insight + 2}</span>
+                  <button onClick={() => setTrainer({...trainer, currentWill: trainer.currentWill + 1})} style={styles.btnCircleMinBlue}>+</button>
+                </div>
+              </div>
+            </div>
+
+            {/* STATISTICHE DERIVATE ALLENATORE */}
+            <div style={{...styles.sheetBox, marginTop: '15px', borderColor: '#555'}}>
+              <div style={{...styles.sheetBoxHeader, backgroundColor: '#555'}}>REAZIONI RAPIDE</div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', padding: '10px', textAlign: 'center' }}>
+                <div style={{cursor: 'pointer'}} onClick={() => tiraDadi(trainer.stats.Dexterity + (trainer.skills.Alert || 0), "Iniziativa Allenatore")}>
+                  <div style={{fontSize: '10px', color: '#aaa', fontWeight: 'bold'}}>INIZIATIVA</div>
+                  <div style={{fontSize: '18px', color: '#fff'}}>🎲 {trainer.stats.Dexterity + (trainer.skills.Alert || 0)}</div>
+                </div>
+                <div style={{cursor: 'pointer'}} onClick={() => tiraDadi(trainer.stats.Dexterity + (trainer.skills.Evasion || 0), "Evasione Allenatore")}>
+                  <div style={{fontSize: '10px', color: '#aaa', fontWeight: 'bold'}}>EVASIONE</div>
+                  <div style={{fontSize: '18px', color: '#fff'}}>🎲 {trainer.stats.Dexterity + (trainer.skills.Evasion || 0)}</div>
+                </div>
+              </div>
+            </div>
+
+            {/* ATTRIBUTI ALLENATORE */}
+            <div style={{display: 'flex', gap: '20px', marginTop: '20px', flexWrap: 'wrap'}}>
+              <div style={{flex: '1', minWidth: '200px', display: 'flex', flexDirection: 'column', gap: '10px'}}>
+                <div style={{...styles.sheetBoxHeader, backgroundColor: '#444'}}>ATTRIBUTI</div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(80px, 1fr))', gap: '10px' }}>
+                  {Object.entries(trainer.stats).map(([k, v]) => (
+                    <div key={k} style={{...styles.sheetAttributeBox, minWidth: 'auto'}}>
+                      <label style={styles.sheetAttributeLabel}>{tradStats[k]}</label>
+                      <input type="number" value={v} onChange={e => setTrainer({...trainer, stats: {...trainer.stats, [k]: parseInt(e.target.value) || 0}})} style={{...styles.sheetAttributeInput, fontSize: '20px'}} />
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
             <div style={{display: 'flex', gap: '20px', marginTop: '20px', flexWrap: 'wrap'}}>
@@ -641,67 +786,161 @@ function App() {
             {squadra.map(p => (
               <div key={p.id} style={{...styles.physicalSheet, marginBottom: '40px', borderLeft: '8px solid #ff4757'}}>
                 <div style={styles.sheetHeader}><h1>SCHEDA POKÉMON</h1></div>
-                <div style={{ display: 'flex', gap: '20px', marginBottom: '20px', flexWrap: 'wrap' }}>
-                  <div style={{ flex: '0 0 140px', textAlign: 'center', backgroundColor: '#222', borderRadius: '15px', padding: '10px', display: 'flex', justifyContent: 'center', alignItems: 'center', margin: '0 auto' }}>
-                    {renderImmagine('pokemon', p.currentForm, { width: '120px', height: '120px', objectFit: 'contain' })}
+                
+                {/* INTESTAZIONE: Immagine + Dati Base */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 250px), 1fr))', gap: '20px', marginBottom: '20px' }}>
+                  
+                  {/* BOX IMMAGINE (Al centro su Mobile) */}
+                  <div style={{ textAlign: 'center', backgroundColor: '#222', borderRadius: '15px', padding: '15px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                    {renderImmagine('pokemon', p.currentForm, { width: '130px', height: '130px', objectFit: 'contain' })}
                   </div>
-                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '10px', minWidth: '250px' }}>
+                  
+                  {/* BOX DATI (Nome, Forma, Natura, Strumento) */}
+                  {/* BOX DATI (Nome, Forma, Natura, Strumento, Efficacia) */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    
                     <div style={styles.sheetGridRow}>
-                      <div style={{...styles.sheetInputBox, flex: 2}}>
+                      <div style={styles.sheetInputBox}>
                         <label style={styles.sheetLabel}>NOME</label>
                         <input style={styles.sheetInput} value={tNomePkm(p.Name)} readOnly />
                         <div style={{display: 'flex', gap: '5px', marginTop: '5px'}}>
                           <span style={{...styles.typeBadge, backgroundColor: typeColors[p.Type1]}}>{tradTipi[p.Type1]}</span>
-                          {p.Type2 && p.Type2 !== "None" && (
-                            <span style={{...styles.typeBadge, backgroundColor: typeColors[p.Type2]}}>{tradTipi[p.Type2]}</span>
-                          )}
+                          {p.Type2 && p.Type2 !== "None" && <span style={{...styles.typeBadge, backgroundColor: typeColors[p.Type2]}}>{tradTipi[p.Type2]}</span>}
                         </div>
                       </div>
+
                       {p.availableForms && p.availableForms.length > 1 && (
-                        <div style={{...styles.sheetInputBox, flex: 1.5}}>
+                        <div style={styles.sheetInputBox}>
                           <label style={styles.sheetLabel}>FORMA</label>
-                          <select style={{...styles.sheetInput, backgroundColor: '#252525'}} value={p.currentForm} onChange={(e) => scambiaForma(p.id, e.target.value)}>
+                          <select style={{...styles.sheetInput, backgroundColor: '#252525', width: '100%', cursor: 'pointer'}} value={p.currentForm} onChange={(e) => scambiaForma(p.id, e.target.value)}>
                              {p.availableForms.map(f => <option key={f} value={f}>{tNomePkm(f)}</option>)}
                           </select>
                         </div>
                       )}
-                      
-                      {/* NUOVO BLOCCO NATURA */}
-                      <div style={{...styles.sheetInputBox, flex: 1.5}}>
+                    </div>
+
+                    <div style={styles.sheetGridRow}>
+                      <div style={styles.sheetInputBox}>
                         <label style={styles.sheetLabel}>NATURA</label>
-                        <select style={{...styles.sheetInput, backgroundColor: '#252525'}} value={p.currentNature || ""} onChange={(e) => cambiaNatura(p.id, e.target.value)}>
+                        <select style={{...styles.sheetInput, backgroundColor: '#252525', width: '100%', cursor: 'pointer'}} value={p.currentNature || ""} onChange={(e) => cambiaNatura(p.id, e.target.value)}>
                           <option value="">-- Seleziona --</option>
                           {listaNature.map(n => <option key={n} value={n}>{n}</option>)}
                         </select>
                       </div>
-                    </div>
-                    <div style={styles.sheetGridRow}>
-                      <div style={{...styles.sheetInputBox, backgroundColor: '#2d1b1b', borderColor: '#ff4757'}}>
-                        <label style={{...styles.sheetLabel, color: '#ff4757'}}>PS</label>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '15px' }}>
-                          <button onClick={() => setSquadra(squadra.map(x => x.id === p.id ? {...x, curHP: x.curHP-1} : x))} style={styles.btnCircleMin}>-</button>
-                          <span style={{ fontSize: '22px', color: '#ff4757', fontWeight: 'bold' }}>{p.curHP} / {p.Vitality}</span>
-                          <button onClick={() => setSquadra(squadra.map(x => x.id === p.id ? {...x, curHP: x.curHP+1} : x))} style={styles.btnCircleMin}>+</button>
-                        </div>
-                      </div>
-                      <div style={{...styles.sheetInputBox, backgroundColor: '#1b2d2d', borderColor: '#4bcffa'}}>
-                        <label style={{...styles.sheetLabel, color: '#4bcffa'}}>VOLONTÀ</label>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '15px' }}>
-                          <button onClick={() => setSquadra(squadra.map(x => x.id === p.id ? {...x, curWill: x.curWill-1} : x))} style={styles.btnCircleMinBlue}>-</button>
-                          <span style={{ fontSize: '22px', color: '#4bcffa', fontWeight: 'bold' }}>{p.curWill || 0} / {p.Insight + 2}</span>
-                          <button onClick={() => setSquadra(squadra.map(x => x.id === p.id ? {...x, curWill: x.curWill+1} : x))} style={styles.btnCircleMinBlue}>+</button>
-                        </div>
+
+                      <div style={styles.sheetInputBox}>
+                        <label style={styles.sheetLabel}>STRUMENTO</label>
+                        <select style={{...styles.sheetInput, backgroundColor: '#252525', width: '100%', cursor: 'pointer'}} value={p.heldItem || ""} onChange={(e) => setSquadra(squadra.map(x => x.id === p.id ? {...x, heldItem: e.target.value} : x))}>
+                          <option value="">-- Nessuno --</option>
+                          {Array.from(new Set([
+                            ...(p.heldItem ? [p.heldItem] : []), 
+                            ...zaino.map(item => item.customName || tItem(item.Name))
+                          ])).map(item => (
+                            <option key={item} value={item}>{item}</option>
+                          ))}
+                        </select>
                       </div>
                     </div>
-                   {/* NUOVO BLOCCO: FIDUCIA */}
-                    <div style={{...styles.sheetGridRow, marginTop: '10px'}}>
-                      <div style={{...styles.sheetInputBox, backgroundColor: '#2d2d1b', borderColor: '#f1c40f', flex: '1'}}>
-                        <label style={{...styles.sheetLabel, color: '#f1c40f'}}>FIDUCIA</label>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-                          <span style={{ fontSize: '26px', color: '#f1c40f', fontWeight: 'bold' }}>{p.confidence || 0}</span>
+
+                    {/* NUOVO BOX: DEBOLEZZE E RESISTENZE */}
+                    {(() => {
+                      const eff = calcolaDebRes(p.Type1, p.Type2);
+                      return (
+                        <div style={{...styles.sheetInputBox, backgroundColor: '#1a1a1a', marginTop: 'auto'}}>
+                          <label style={styles.sheetLabel}>EFFICACIA TIPI</label>
+                          <div style={{display: 'flex', flexDirection: 'column', gap: '5px', marginTop: '8px'}}>
+                            {eff[4].length > 0 && <div style={{fontSize: '11px'}}><strong style={{color: '#ff4757', display: 'inline-block', width: '85px'}}>Debole x4:</strong> {eff[4].map(t => <span key={t} style={{...styles.typeBadgeMini, backgroundColor: typeColors[t]}}>{tradTipi[t]}</span>)}</div>}
+                            {eff[2].length > 0 && <div style={{fontSize: '11px'}}><strong style={{color: '#ff6b81', display: 'inline-block', width: '85px'}}>Debole x2:</strong> {eff[2].map(t => <span key={t} style={{...styles.typeBadgeMini, backgroundColor: typeColors[t]}}>{tradTipi[t]}</span>)}</div>}
+                            {eff[0.5].length > 0 && <div style={{fontSize: '11px'}}><strong style={{color: '#2ed573', display: 'inline-block', width: '85px'}}>Resiste x0.5:</strong> {eff[0.5].map(t => <span key={t} style={{...styles.typeBadgeMini, backgroundColor: typeColors[t]}}>{tradTipi[t]}</span>)}</div>}
+                            {eff[0.25].length > 0 && <div style={{fontSize: '11px'}}><strong style={{color: '#1e90ff', display: 'inline-block', width: '85px'}}>Resiste x0.25:</strong> {eff[0.25].map(t => <span key={t} style={{...styles.typeBadgeMini, backgroundColor: typeColors[t]}}>{tradTipi[t]}</span>)}</div>}
+                            {eff[0].length > 0 && <div style={{fontSize: '11px'}}><strong style={{color: '#a4b0be', display: 'inline-block', width: '85px'}}>Immune x0:</strong> {eff[0].map(t => <span key={t} style={{...styles.typeBadgeMini, backgroundColor: typeColors[t]}}>{tradTipi[t]}</span>)}</div>}
+                          </div>
                         </div>
-                      </div>
+                      );
+                    })()}
+
+                  </div>
+                </div>
+
+                {/* ABILITÀ E DATI FISICI (Si incolonnano da soli su mobile) */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 250px), 1fr))', gap: '10px', marginBottom: '20px' }}>
+                  <div style={styles.sheetInputBox}>
+                    <label style={styles.sheetLabel}>ABILITÀ</label>
+                    <select 
+                      style={{...styles.sheetInput, backgroundColor: '#252525', width: '100%', cursor: 'pointer', fontSize: '14px', marginTop: '5px'}} 
+                      value={p.selectedAbility || p.Ability1} 
+                      onChange={(e) => {
+                        const nAb = e.target.value;
+                        setSquadra(squadra.map(x => x.id === p.id ? {...x, selectedAbility: nAb} : x));
+                        if (!dettagliAbilita[nAb] && nAb !== "None") fetchData('Abilities', nAb).then(d => { if(d) setDettagliAbilita(pr => ({...pr, [nAb]: d}))});
+                      }}
+                    >
+                      <option value={p.Ability1}>{p.Ability1}</option>
+                      {p.Ability2 && p.Ability2 !== "None" && <option value={p.Ability2}>{p.Ability2}</option>}
+                      {p.HiddenAbility && p.HiddenAbility !== "None" && <option value={p.HiddenAbility}>{p.HiddenAbility} (Nascosta)</option>}
+                    </select>
+                    
+                    {(() => {
+                      const abInfo = dettagliAbilita[p.selectedAbility || p.Ability1];
+                      if (abInfo) return (
+                        <div style={{marginTop: '10px', backgroundColor: '#1a1a1a', padding: '10px', borderRadius: '5px', borderLeft: '3px solid #f1c40f'}}>
+                          <div style={{fontSize: '11px', color: '#ccc', fontStyle: 'italic', marginBottom: '5px'}}>{abInfo.Description}</div>
+                          <div style={{fontSize: '12px', color: '#f1c40f'}}><strong>EFFETTO:</strong> {abInfo.Effect}</div>
+                        </div>
+                      );
+                    })()}
+                  </div>
+
+                  <div style={styles.sheetInputBox}>
+                    <label style={styles.sheetLabel}>DATI FISICI</label>
+                    <div style={{color: '#ccc', fontSize: '13px', paddingTop: '10px', display: 'flex', flexDirection: 'column', gap: '8px'}}>
+                      <div style={{backgroundColor: '#111', padding: '8px', borderRadius: '5px'}}>📏 <strong>Altezza:</strong> {p.Height?.Meters ? `${p.Height.Meters} m` : '?'}</div>
+                      <div style={{backgroundColor: '#111', padding: '8px', borderRadius: '5px'}}>⚖️ <strong>Peso:</strong> {p.Weight?.Kilograms ? `${p.Weight.Kilograms} kg` : '?'}</div>
                     </div>
+                  </div>
+                </div>
+
+                {/* VITALI (PS, Volontà, Fiducia, Lealtà, EXP) */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 120px), 1fr))', gap: '10px', marginBottom: '20px' }}>
+                  <div style={{...styles.sheetInputBox, backgroundColor: '#2d1b1b', borderColor: '#ff4757'}}>
+                    <label style={{...styles.sheetLabel, color: '#ff4757', textAlign: 'center'}}>PS</label>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', marginTop: '5px' }}>
+                      <button onClick={() => setSquadra(squadra.map(x => x.id === p.id ? {...x, curHP: x.curHP-1} : x))} style={styles.btnCircleMin}>-</button>
+                      <span style={{ fontSize: '20px', color: '#ff4757', fontWeight: 'bold' }}>{p.curHP}/{p.Vitality}</span>
+                      <button onClick={() => setSquadra(squadra.map(x => x.id === p.id ? {...x, curHP: x.curHP+1} : x))} style={styles.btnCircleMin}>+</button>
+                    </div>
+                  </div>
+
+                  <div style={{...styles.sheetInputBox, backgroundColor: '#1b2d2d', borderColor: '#4bcffa'}}>
+                    <label style={{...styles.sheetLabel, color: '#4bcffa', textAlign: 'center'}}>VOLONTÀ</label>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', marginTop: '5px' }}>
+                      <button onClick={() => setSquadra(squadra.map(x => x.id === p.id ? {...x, curWill: x.curWill-1} : x))} style={styles.btnCircleMinBlue}>-</button>
+                      <span style={{ fontSize: '20px', color: '#4bcffa', fontWeight: 'bold' }}>{p.curWill || 0}/{p.Insight + 2}</span>
+                      <button onClick={() => setSquadra(squadra.map(x => x.id === p.id ? {...x, curWill: x.curWill+1} : x))} style={styles.btnCircleMinBlue}>+</button>
+                    </div>
+                  </div>
+
+                  <div style={{...styles.sheetInputBox, backgroundColor: '#2d2d1b', borderColor: '#f1c40f'}}>
+                    <label style={{...styles.sheetLabel, color: '#f1c40f', textAlign: 'center'}}>FIDUCIA</label>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', marginTop: '5px' }}>
+                      <button onClick={() => setSquadra(squadra.map(x => x.id === p.id ? {...x, confidence: (x.confidence || 0) - 1} : x))} style={{...styles.btnCircleMin, borderColor: '#f1c40f', color: '#f1c40f'}}>-</button>
+                      <span style={{ fontSize: '20px', color: '#f1c40f', fontWeight: 'bold' }}>{p.confidence || 0}</span>
+                      <button onClick={() => setSquadra(squadra.map(x => x.id === p.id ? {...x, confidence: (x.confidence || 0) + 1} : x))} style={{...styles.btnCircleMin, borderColor: '#f1c40f', color: '#f1c40f'}}>+</button>
+                    </div>
+                  </div>
+
+                  <div style={{...styles.sheetInputBox, backgroundColor: '#331b2d', borderColor: '#e84393'}}>
+                    <label style={{...styles.sheetLabel, color: '#e84393', textAlign: 'center'}}>LEALTÀ</label>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', marginTop: '5px' }}>
+                      <button onClick={() => setSquadra(squadra.map(x => x.id === p.id ? {...x, loyalty: Math.max(0, (x.loyalty || 0) - 1)} : x))} style={{...styles.btnCircleMin, borderColor: '#e84393', color: '#e84393'}}>-</button>
+                      <span style={{ fontSize: '20px', color: '#e84393', fontWeight: 'bold' }}>{p.loyalty || 0}</span>
+                      <button onClick={() => setSquadra(squadra.map(x => x.id === p.id ? {...x, loyalty: Math.min(5, (x.loyalty || 0) + 1)} : x))} style={{...styles.btnCircleMin, borderColor: '#e84393', color: '#e84393'}}>+</button>
+                    </div>
+                  </div>
+
+                  <div style={{...styles.sheetInputBox, backgroundColor: '#1b3320', borderColor: '#2ed573'}}>
+                    <label style={{...styles.sheetLabel, color: '#2ed573', textAlign: 'center'}}>EXP</label>
+                    <input type="number" style={{...styles.sheetInput, color: '#2ed573', textAlign: 'center', fontSize: '24px', width: '100%', marginTop: '3px'}} value={p.exp || 0} onChange={e => setSquadra(squadra.map(x => x.id === p.id ? {...x, exp: parseInt(e.target.value) || 0} : x))} />
                   </div>
                 </div>
 
@@ -717,52 +956,106 @@ function App() {
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', gap: '20px', marginTop: '20px', flexWrap: 'wrap' }}>
-                  <div style={{ flex: '0.8', display: 'flex', flexDirection: 'column', gap: '10px', minWidth: '150px' }}>
-                    <div style={{...styles.sheetBoxHeader, backgroundColor: '#444'}}>ATTRIBUTI</div>
+                {/* ATTRIBUTI E SKILL (Migliorati per Mobile) */}
+                <div style={{...styles.sheetBox, marginBottom: '20px'}}>
+                  <div style={{...styles.sheetBoxHeader, backgroundColor: '#444'}}>ATTRIBUTI</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(70px, 1fr))', gap: '8px', padding: '10px' }}>
                     {['Strength', 'Dexterity', 'Vitality', 'Special', 'Insight'].map(s => (
-                      <div key={s} style={styles.sheetAttributeBox}>
-                        <label style={styles.sheetAttributeLabel}>{tradStats[s]}</label>
-                        <input type="number" value={p[s]} onChange={e => setSquadra(squadra.map(x => x.id === p.id ? {...x, [s]: parseInt(e.target.value) || 0} : x))} style={styles.sheetAttributeInput} />
+                      <div key={s} style={{...styles.sheetAttributeBox, padding: '5px', minWidth: 'auto'}}>
+                        <label style={{...styles.sheetAttributeLabel, fontSize: '9px', display: 'block'}}>{tradStats[s]}</label>
+                        <span style={{color: '#666', fontSize: '8px', display: 'block'}}>(Max {p['Max' + s] || '?'})</span>
+                        <input type="number" value={p[s]} onChange={e => setSquadra(squadra.map(x => x.id === p.id ? {...x, [s]: parseInt(e.target.value) || 0} : x))} style={{...styles.sheetAttributeInput, fontSize: '20px'}} />
                       </div>
                     ))}
                   </div>
-                  <div style={{ flex: '2', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '15px' }}>
-                    {renderPkmSkillGroup("LOTTA", ['Brawl', 'Channel', 'Clash', 'Evasion'], p)}
-                    {renderPkmSkillGroup("SOPRAVVIVENZA", ['Alert', 'Athletic', 'Nature', 'Stealth'], p)}
-                    {renderPkmSkillGroup("SOCIALE", ['Allure', 'Etiquette', 'Intimidate', 'Perform'], p)}
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 150px), 1fr))', gap: '15px' }}>
+                  {renderPkmSkillGroup("LOTTA", ['Brawl', 'Channel', 'Clash', 'Evasion'], p)}
+                  {renderPkmSkillGroup("SOPRAVVIVENZA", ['Alert', 'Athletic', 'Nature', 'Stealth'], p)}
+                  {renderPkmSkillGroup("SOCIALE", ['Allure', 'Etiquette', 'Intimidate', 'Perform'], p)}
+                </div>
+
+                {/* STATISTICHE DERIVATE */}
+                <div style={{...styles.sheetBox, marginTop: '20px'}}>
+                  <div style={styles.sheetBoxHeader}>STATISTICHE DERIVATE</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(80px, 1fr))', gap: '10px', padding: '15px', textAlign: 'center' }}>
+                    <div style={{cursor: 'pointer'}} onClick={() => tiraDadi(p.Dexterity + (p.pkmSkills?.Alert || 0), "Iniziativa")}>
+                      <div style={{fontSize: '11px', color: '#aaa', fontWeight: 'bold'}}>INIZIATIVA</div>
+                      <div style={{fontSize: '20px', color: '#fff'}}>🎲 {p.Dexterity + (p.pkmSkills?.Alert || 0)}</div>
+                    </div>
+                    <div style={{cursor: 'pointer'}} onClick={() => tiraDadi(p.Dexterity + (p.pkmSkills?.Evasion || 0), "Evasione")}>
+                      <div style={{fontSize: '11px', color: '#aaa', fontWeight: 'bold'}}>EVASIONE</div>
+                      <div style={{fontSize: '20px', color: '#fff'}}>🎲 {p.Dexterity + (p.pkmSkills?.Evasion || 0)}</div>
+                    </div>
+                    <div>
+                      <div style={{fontSize: '11px', color: '#aaa', fontWeight: 'bold'}}>DIF. FISICA</div>
+                      <div style={{fontSize: '20px', color: '#fff'}}>🛡️ {p.Vitality}</div>
+                    </div>
+                    <div>
+                      <div style={{fontSize: '11px', color: '#aaa', fontWeight: 'bold'}}>DIF. SPEC.</div>
+                      <div style={{fontSize: '20px', color: '#fff'}}>✨ {p.Insight}</div>
+                    </div>
                   </div>
                 </div>
 
+                {/* MOSSE */}
                 <div style={{ marginTop: '25px', ...styles.sheetBox }}>
                   <div style={styles.sheetBoxHeader}>MOSSE</div>
-                  <div style={{ padding: '15px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '15px' }}>
+                  <div style={{ padding: '15px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 250px), 1fr))', gap: '15px' }}>
                     {[0, 1, 2, 3].map(i => {
                       const mossaNome = p.selectedMoves[i];
                       const info = dettagliMosse[mossaNome];
-                      let baseStat = 0, accVal = 0, dmgVal = "-", skillUsata = 0;
+                      let baseStat = 0, accVal = 0, dmgVal = "-", skillUsata = 0, isStab = false;
                       if (info) {
                         baseStat = info.Category === "Special" ? p.Special : (info.Category === "Physical" ? p.Strength : Math.max(p.Insight, p.Dexterity));
                         accVal = parseInt(info.Accuracy) || 0;
                         dmgVal = parseInt(info.Power || info.Damage) || "-";
                         skillUsata = info.Category === "Special" ? (p.pkmSkills?.Channel || 0) : (p.pkmSkills?.Brawl || 0);
+                        isStab = (info.Type === p.Type1 || info.Type === p.Type2) && info.Type !== "None";
                       }
                       const prec = baseStat + skillUsata + accVal;
+                      const dmgFinale = dmgVal === "-" ? "-" : (baseStat + dmgVal + (isStab ? 1 : 0));
+
                       return (
                         <div key={i} style={styles.sheetMoveCard}>
-                          <select style={{...styles.sheetInput, backgroundColor: '#111', padding: '10px'}} value={mossaNome} onChange={(e) => {
-                            const n = [...p.selectedMoves]; n[i] = e.target.value;
-                            setSquadra(squadra.map(x => x.id === p.id ? {...x, selectedMoves: n} : x));
-                          }}>
+                          <select 
+                            style={{...styles.sheetInput, backgroundColor: '#252525', width: '100%', cursor: 'pointer', outline: 'none', border: 'none'}} 
+                            value={mossaNome} 
+                            onChange={(e) => {
+                              const nuovaMossa = e.target.value;
+                              if (!nuovaMossa) {
+                                const n = [...p.selectedMoves]; n[i] = "";
+                                setSquadra(squadra.map(x => x.id === p.id ? {...x, selectedMoves: n} : x));
+                                return;
+                              }
+                              const moveInfoPkm = p.Moves.find(m => m.Name === nuovaMossa);
+                              const mossaRank = moveInfoPkm?.Learn || moveInfoPkm?.Rank || moveInfoPkm?.Learned || "Starter";
+                              const valAllenatore = rankValues[trainer.rango || "Starter"] || 0;
+                              const valMossa = rankValues[mossaRank] || 0;
+
+                              if (valMossa > valAllenatore) {
+                                const conferma = window.confirm(`⚠️ ATTENZIONE!\nQuesta mossa richiede il rango [${mossaRank}], ma il tuo allenatore è solo [${trainer.rango || "Starter"}].\n\nVuoi aggiungerla ugualmente?`);
+                                if (!conferma) return; 
+                              }
+
+                              const n = [...p.selectedMoves]; n[i] = nuovaMossa;
+                              setSquadra(squadra.map(x => x.id === p.id ? {...x, selectedMoves: n} : x));
+                            }}>
                             <option value="">-- Seleziona --</option>
-                            {p.Moves.map(m => <option key={m.Name} value={m.Name}>{tMossa(m.Name)}</option>)}
+                            {p.Moves.map(m => {
+                              const r = m.Learn || m.Rank || m.Learned || "Starter";
+                              return <option key={m.Name} value={m.Name}>{tMossa(m.Name)} [{r}]</option>;
+                            })}
                           </select>
                           {info && (
                             <div style={{marginTop: 10, borderTop: `2px solid ${typeColors[info.Type]}`, paddingTop: 10}}>
                               <div style={{display:'flex', justifyContent:'space-between', fontSize: 14}}>
                                 <span style={{color: typeColors[info.Type], fontWeight:'bold'}}>{tradTipi[info.Type]}</span>
                                 <span>{tCatMosse(info.Category)}</span>
-                                <span style={{cursor:'pointer'}} onClick={() => tiraDadi(prec, tMossa(mossaNome))}>🎲 {prec} | 💥 {dmgVal === "-" ? "-" : (baseStat + dmgVal)}</span>
+                                <span style={{cursor:'pointer'}} onClick={() => tiraDadi(prec, tMossa(mossaNome))}>
+                                  🎲 {prec} | 💥 {dmgFinale} {isStab && <span style={{color: '#f1c40f', fontSize: '10px'}}>STAB</span>}
+                                </span>
                               </div>
                               <div style={{fontSize: 12, color:'#aaa', fontStyle:'italic', marginTop: 5}}>{info.Effect || info.Description}</div>
                             </div>
@@ -793,6 +1086,38 @@ function App() {
           </div>
         )}
       </div>
+      {/* LOG DEI DADI GRAFICO */}
+      {diceLog.length > 0 && (
+        <div style={styles.diceLogContainer}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', borderBottom: '1px solid #444', pb: '5px' }}>
+            <span style={{ fontSize: '10px', fontWeight: 'bold', color: '#ff4757' }}>LOG RECENTE</span>
+            <button onClick={() => setDiceLog([])} style={{ background: 'none', border: 'none', color: '#888', cursor: 'pointer', fontSize: '10px' }}>Pulisci</button>
+          </div>
+          {diceLog.map(t => (
+            <div key={t.id} style={styles.diceEntry}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: '#aaa' }}>
+                <span>{t.nome}</span>
+                <span>{t.timestamp}</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '3px' }}>
+                <div style={{ flex: 1, display: 'flex', flexWrap: 'wrap', gap: '3px' }}>
+                  {t.dadi.map((d, idx) => (
+                    <span key={idx} style={{ 
+                      ...styles.miniDie, 
+                      backgroundColor: d >= 4 ? '#2ed573' : '#444',
+                      borderColor: d === 6 ? '#f1c40f' : 'transparent'
+                    }}>{d}</span>
+                  ))}
+                </div>
+                <div style={{ textAlign: 'center', minWidth: '40px' }}>
+                  <div style={{ fontSize: '18px', color: '#fff', fontWeight: 'bold' }}>{t.successi}</div>
+                  <div style={{ fontSize: '8px', color: '#2ed573' }}>SUCCESSI</div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -805,8 +1130,8 @@ const styles = {
   mainContent: { padding: '15px', maxWidth: '850px', margin: '0 auto' },
   physicalSheet: { backgroundColor: '#1e1e1e', padding: '20px', borderRadius: '15px', border: '1px solid #333', boxShadow: '0 10px 30px rgba(0,0,0,0.8)' },
   sheetHeader: { borderBottom: '2px solid #555', paddingBottom: '10px', marginBottom: '15px', textAlign: 'center' },
-  sheetGridRow: { display: 'flex', gap: '10px', marginBottom: '10px', flexWrap: 'wrap' },
-  sheetInputBox: { flex: 1, border: '1px solid #444', backgroundColor: '#252525', borderRadius: '8px', padding: '8px 10px', display: 'flex', flexDirection: 'column', minWidth: '120px' },
+  sheetGridRow: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 140px), 1fr))', gap: '10px', marginBottom: '10px' },
+  sheetInputBox: { border: '1px solid #444', backgroundColor: '#252525', borderRadius: '8px', padding: '8px 10px', display: 'flex', flexDirection: 'column' },
   sheetLabel: { fontSize: '9px', color: '#888', fontWeight: 'bold', textTransform: 'uppercase' },
   sheetInput: { background: 'none', border: 'none', color: '#fff', fontSize: '16px', fontWeight: 'bold', outline: 'none' },
   sheetBox: { border: '1px solid #444', borderRadius: '10px', overflow: 'hidden', backgroundColor: '#222', marginBottom: 15 },
@@ -836,10 +1161,52 @@ const styles = {
     fontWeight: 'bold',
     textTransform: 'uppercase'
   },
+  diceLogContainer: {
+    position: 'fixed',
+    bottom: '20px',
+    right: '20px',
+    width: '280px',
+    backgroundColor: 'rgba(30, 30, 30, 0.95)',
+    border: '1px solid #444',
+    borderRadius: '12px',
+    padding: '12px',
+    boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+    zIndex: 1000,
+    backdropFilter: 'blur(5px)'
+  },
+  diceEntry: {
+    marginBottom: '12px',
+    paddingBottom: '8px',
+    borderBottom: '1px solid #333'
+  },
+  miniDie: {
+    width: '18px',
+    height: '18px',
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: '3px',
+    fontSize: '11px',
+    fontWeight: 'bold',
+    color: '#fff',
+    border: '1px solid transparent'
+  },
+  typeBadgeMini: {
+    fontSize: '8px',
+    padding: '2px 5px',
+    borderRadius: '3px',
+    color: '#fff',
+    fontWeight: 'bold',
+    textTransform: 'uppercase',
+    display: 'inline-block',
+    marginRight: '3px',
+    marginBottom: '3px'
+  },
   statusBtn: { padding: '5px 10px', borderRadius: '8px', fontSize: '10px', fontWeight: 'bold', color: '#fff', border: 'none' },
   btnDeletePiccolo: { background: 'none', border: 'none', cursor: 'pointer' },
   imgContainer: { width: '50px', height: '50px', display: 'flex', justifyContent: 'center', alignItems: 'center' },
   effectBox: { backgroundColor: '#333', padding: '5px', borderRadius: '5px', marginTop: '5px', fontSize: '11px', color: '#ddd' }
+  
 };
 
 export default App;
