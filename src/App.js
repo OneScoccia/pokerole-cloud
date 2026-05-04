@@ -59,7 +59,7 @@ const typeEfficacia = {
   Fairy: { Fighting: 0.5, Poison: 2, Bug: 0.5, Dragon: 0, Dark: 0.5, Steel: 2 }
 };
 
-const tradStats = { Strength: 'FORZA', Dexterity: 'DESTREZZA', Vitality: 'VITALITÀ', Special: 'SPECIALE', Insight: 'ACUME' };
+const tradStats = { Strength: 'STRENGTH', Dexterity: 'DEXTERITY', Vitality: 'VITALITY', Special: 'SPECIAL', Insight: 'INSIGHT', Tough: 'TOUGH', Cool: 'COOL', Beauty: 'BEAUTY', Cute: 'CUTE', Clever: 'CLEVER' };
 
 const rankList = ["Starter", "Beginner", "Amateur", "Ace", "Pro", "Master", "Champion"];
 
@@ -76,30 +76,19 @@ const rankValues = {
 };
 
 const tradTrainerSkills = {
-  Brawl: 'Rissa', Throw: 'Lancio', Evasion: 'Evasione', Weapons: 'Armi',
-  Alert: 'Allerta', Athletic: 'Atletica', Nature: 'Natura', Stealth: 'Furtività', Survival: 'Sopravvivenza',
-  Allure: 'Fascino', Etiquette: 'Etichetta', Intimidate: 'Intimidire', Perform: 'Esibire',
-  Lore: 'Storia/Cultura', Medicine: 'Medicina', Science: 'Scienza', Crafts: 'Artigianato', Command: 'Comandare'
+  Brawl: 'Brawl', Throw: 'Throw', Evasion: 'Evasion', Weapons: 'Weapons',
+  Alert: 'Alert', Athletic: 'Athletic', Nature: 'Nature', Stealth: 'Stealth', Survival: 'Survival',
+  Allure: 'Allure', Etiquette: 'Etiquette', Intimidate: 'Intimidate', Perform: 'Perform',
+  Lore: 'Lore', Medicine: 'Medicine', Science: 'Science', Crafts: 'Crafts', Command: 'Command'
 };
 
 const tradPkmSkills = {
-  Brawl: 'Rissa', Channel: 'Incanalare', Clash: 'Contrasto', Evasion: 'Evasione',
-  Alert: 'Allerta', Athletic: 'Atletica', Nature: 'Natura', Stealth: 'Furtività',
-  Allure: 'Fascino', Etiquette: 'Etichetta', Intimidate: 'Intimidire', Perform: 'Esibire'
+  Brawl: 'Brawl', Channel: 'Channel', Clash: 'Clash', Evasion: 'Evasion',
+  Alert: 'Alert', Athletic: 'Athletic', Nature: 'Nature', Stealth: 'Stealth',
+  Allure: 'Allure', Etiquette: 'Etiquette', Intimidate: 'Intimidate', Perform: 'Perform'
 };
 
-const attrBaseTrainer = {
-  Brawl: 'Strength', Throw: 'Dexterity', Evasion: 'Dexterity', Weapons: 'Strength',
-  Alert: 'Insight', Athletic: 'Vitality', Nature: 'Insight', Stealth: 'Dexterity', Survival: 'Insight',
-  Allure: 'Special', Etiquette: 'Insight', Intimidate: 'Strength', Perform: 'Special',
-  Lore: 'Insight', Medicine: 'Insight', Science: 'Insight', Crafts: 'Dexterity', Command: 'Insight'
-};
 
-const attrBasePkm = {
-  Brawl: 'Strength', Channel: 'Special', Clash: 'Strength', Evasion: 'Dexterity',
-  Alert: 'Insight', Athletic: 'Vitality', Nature: 'Insight', Stealth: 'Dexterity',
-  Allure: 'Special', Etiquette: 'Insight', Intimidate: 'Strength', Perform: 'Special'
-};
 
 const tradStrumentiEngToIta = {
   "Pokeball": "Poké Ball", "Greatball": "Mega Ball", "Ultraball": "Ultra Ball", "Masterball": "Master Ball",
@@ -269,7 +258,6 @@ const calcolaDebRes = (t1, t2) => {
   return res;
 };
 
-const tCatMosse = (cat) => cat === 'Physical' ? 'Fisico' : cat === 'Special' ? 'Speciale' : 'Supporto';
 const tItem = (engName) => tradStrumentiEngToIta[engName] || engName;
 const tMossa = (engName) => tradMosseEngToIta[engName] || engName;
 
@@ -331,8 +319,6 @@ function App() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [authError, setAuthError] = useState("");
-  const [diceLog, setDiceLog] = useState([]);
-
   const [tab, setTab] = useState("trainer"); 
   const [ricerca, setRicerca] = useState("");
   const [pkmTrovato, setPkmTrovato] = useState(null);
@@ -341,11 +327,14 @@ function App() {
   const [dettagliAbilita, setDettagliAbilita] = useState({});
   const [zaino, setZaino] = useState([]);
   const [itemSelezionato, setItemSelezionato] = useState("");
-
+  const [activePkmId, setActivePkmId] = useState(null);
+  const [ricercaAvversario, setRicercaAvversario] = useState("");
+  const [avversario, setAvversario] = useState(null);
+  
   const [trainer, setTrainer] = useState({
-    nome: "", player: "", age: 15, concept: "", nature: "",
+    nome: "", player: "", age: 15,
     money: 3000, confidence: 1, currentHP: 2, currentWill: 4,
-    stats: { Strength: 2, Dexterity: 2, Vitality: 2, Special: 2, Insight: 2 },
+    stats: { Strength: 2, Dexterity: 2, Vitality: 2, Insight: 2, Tough: 1, Cool: 1, Beauty: 1, Cute: 1, Clever: 1 },
     skills: { 
       Brawl: 1, Throw: 0, Evasion: 1, Weapons: 0, 
       Alert: 1, Athletic: 0, Nature: 0, Stealth: 0, Survival: 0,
@@ -376,6 +365,30 @@ function App() {
     return () => unsubscribe();
   }, []);
 
+  // --- AUTOCARICAMENTO DATI MANCANTI (MOSSE E ABILITÀ) ---
+  useEffect(() => {
+    if (squadra.length === 0) return;
+    
+    squadra.forEach(p => {
+      // 1. Controlla e scarica le Mosse mancanti
+      p.selectedMoves.forEach(async (mossa) => {
+        if (mossa && !dettagliMosse[mossa]) {
+          const data = await fetchData('Moves', mossa);
+          if (data) setDettagliMosse(prev => ({ ...prev, [mossa]: data }));
+        }
+      });
+
+      // 2. Controlla e scarica l'Abilità mancante
+      const abilita = p.selectedAbility || p.Ability1;
+      if (abilita && abilita !== "None" && !dettagliAbilita[abilita]) {
+        fetchData('Abilities', abilita).then(data => {
+          if (data) setDettagliAbilita(prev => ({ ...prev, [abilita]: data }));
+        });
+      }
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [squadra]); // Si attiva da solo ogni volta che carichi o modifichi la squadra
+
   const gestisciLogin = async (e) => {
     e.preventDefault();
     setAuthError("");
@@ -398,28 +411,6 @@ function App() {
     }
   };
 
-  const curaTuttaLaSquadra = () => {
-    const conferma = window.confirm("🏥 Vuoi curare tutto (Allenatore e Squadra)?");
-    if (!conferma) return;
-
-    // Cura Allenatore
-    setTrainer({
-      ...trainer,
-      currentHP: trainer.stats.Vitality,
-      currentWill: trainer.stats.Insight + 2
-    });
-
-    // Cura Squadra
-    const squadraCurata = squadra.map(p => ({
-      ...p,
-      curHP: p.Vitality,
-      curWill: p.Insight + 2,
-      activeStatus: []
-    }));
-
-    setSquadra(squadraCurata);
-    alert("✨ Centro Pokémon: Ripristino completato!");
-  };
 
   const fetchData = async (folder, name) => {
     try {
@@ -430,26 +421,6 @@ function App() {
     } catch (e) { return null; }
   };
 
-  const tiraDadi = (numero, nomeTradotto) => {
-    if (isNaN(numero) || numero <= 0) return;
-    let tiri = [], successi = 0;
-    for (let i = 0; i < numero; i++) {
-      let d = Math.floor(Math.random() * 6) + 1;
-      tiri.push(d);
-      if (d >= 4) successi++;
-    }
-
-    const nuovoTiro = {
-      id: Date.now(),
-      nome: nomeTradotto.toUpperCase(),
-      dadi: tiri,
-      successi: successi,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
-    };
-
-    // Teniamo solo gli ultimi 5 tiri nel log
-    setDiceLog(prev => [nuovoTiro, ...prev].slice(0, 5));
-  };
 
   const cercaPokemon = async () => {
     const query = ricerca.trim().toLowerCase();
@@ -479,6 +450,25 @@ function App() {
       pkm.availableForms = listaPokemon.filter(p => p === nomeBase || p.startsWith(nomeBase + " ("));
       pkm.currentForm = nomeReale; 
       setPkmTrovato(pkm);
+    }
+  };
+
+  const cercaAvversario = async () => {
+    const query = ricercaAvversario.trim().toLowerCase();
+    if (!query) return;
+
+    let nomeReale = listaPokemon.find(p => p.toLowerCase() === query);
+    if (!nomeReale) nomeReale = listaPokemon.find(p => p.toLowerCase().startsWith(query + " ("));
+    if (!nomeReale) return alert("Pokémon avversario non trovato!");
+
+    const isGmax = nomeReale.includes("Gigantamax");
+    const nomeJSON = isGmax ? nomeReale.split(' (')[0] : nomeReale;
+
+    const pkm = await fetchData('Pokedex', nomeJSON);
+    if (pkm) {
+      pkm.currentForm = nomeReale; 
+      setAvversario(pkm);
+      setRicercaAvversario(""); // Svuota la barra di ricerca
     }
   };
 
@@ -597,11 +587,11 @@ function App() {
   const renderTrainerSkillGroup = (title, skillsArray) => (
     <div style={styles.sheetBox}>
       <div style={styles.sheetBoxHeader}>{title}</div>
-      <div style={{padding: '10px'}}>
+      <div style={{padding: '5px 10px'}}>
         {skillsArray.map(k => (
-          <div key={k} style={styles.sheetSkillRow} onClick={() => tiraDadi(trainer.skills[k] + trainer.stats[attrBaseTrainer[k]], tradTrainerSkills[k])}>
-            <span style={{fontSize: '14px', fontWeight: 'bold'}}>{tradTrainerSkills[k]}</span>
-            <input type="number" value={trainer.skills[k]} onClick={e => e.stopPropagation()} onChange={e => setTrainer({...trainer, skills: {...trainer.skills, [k]: parseInt(e.target.value) || 0}})} style={styles.sheetMiniInput} />
+          <div key={k} style={{...styles.sheetSkillRow, cursor: 'default', padding: '8px 5px'}}>
+            <span style={{fontSize: '13px', fontWeight: 'bold'}}>{tradTrainerSkills[k]}</span>
+            <input type="number" value={trainer.skills?.[k] || 0} onChange={e => setTrainer({...trainer, skills: {...trainer.skills, [k]: parseInt(e.target.value) || 0}})} style={styles.sheetMiniInput} />
           </div>
         ))}
       </div>
@@ -611,11 +601,11 @@ function App() {
   const renderPkmSkillGroup = (title, skillsArray, p) => (
     <div style={styles.sheetBox}>
       <div style={styles.sheetBoxHeader}>{title}</div>
-      <div style={{padding: '10px'}}>
+      <div style={{padding: '5px 10px'}}>
         {skillsArray.map(k => (
-          <div key={k} style={styles.sheetSkillRow} onClick={() => tiraDadi((p.pkmSkills[k] || 0) + p[attrBasePkm[k]], tNomePkm(p.Name) + ' - ' + tradPkmSkills[k])}>
-            <span style={{fontSize: '14px', fontWeight: 'bold'}}>{tradPkmSkills[k]}</span>
-            <input type="number" value={p.pkmSkills[k] || 0} onClick={e => e.stopPropagation()} onChange={e => setSquadra(squadra.map(x => x.id === p.id ? {...x, pkmSkills: {...x.pkmSkills, [k]: parseInt(e.target.value) || 0}} : x))} style={styles.sheetMiniInput} />
+          <div key={k} style={{...styles.sheetSkillRow, cursor: 'default', padding: '8px 5px'}}>
+            <span style={{fontSize: '13px', fontWeight: 'bold'}}>{tradPkmSkills[k]}</span>
+            <input type="number" value={p.pkmSkills?.[k] || 0} onChange={e => setSquadra(squadra.map(x => x.id === p.id ? {...x, pkmSkills: {...x.pkmSkills, [k]: parseInt(e.target.value) || 0}} : x))} style={styles.sheetMiniInput} />
           </div>
         ))}
       </div>
@@ -653,10 +643,8 @@ function App() {
         <button onClick={() => setTab("trainer")} style={tab === "trainer" ? styles.navActive : styles.navBtn}>👤 ALLENATORE</button>
         <button onClick={() => setTab("squadra")} style={tab === "squadra" ? styles.navActive : styles.navBtn}>🎒 SQUADRA ({squadra.length})</button>
         <button onClick={() => setTab("pokedex")} style={tab === "pokedex" ? styles.navActive : styles.navBtn}>🔍 POKÉDEX</button>
+        <button onClick={() => setTab("battaglia")} style={tab === "battaglia" ? styles.navActive : styles.navBtn}>⚔️ BATTAGLIA</button>
         <div style={{flex: 1, display: 'flex', justifyContent: 'flex-end', padding: '10px', gap: '10px'}}>
-          {/* NUOVO TASTO CENTRO POKEMON */}
-          <button onClick={curaTuttaLaSquadra} style={{...styles.btnSuccess, backgroundColor: '#eb4d4b', padding: '10px', width: 'auto', marginTop: 0, fontSize: '14px'}}>🏥 CURA</button>
-          
           <button onClick={salvaSulCloud} style={{...styles.btnSuccess, padding: '10px', width: 'auto', marginTop: 0, fontSize: '14px'}}>☁️ SALVA</button>
           <button onClick={() => signOut(auth)} style={{...styles.btnDelPkm, padding: '10px'}}>ESCI</button>
         </div>
@@ -666,83 +654,85 @@ function App() {
         {tab === "trainer" && (
           <div style={styles.physicalSheet}>
             <div style={styles.sheetHeader}>
-              <h1 style={{margin: 0, fontSize: '28px', letterSpacing: '2px'}}>SCHEDA ALLENATORE</h1>
+              <h1 style={{margin: 0, fontSize: '28px', letterSpacing: '2px'}}>TRAINER'S LICENCE</h1>
             </div>
-            <div style={styles.sheetGridRow}>
-              <div style={styles.sheetInputBox}><label style={styles.sheetLabel}>NOME</label><input style={styles.sheetInput} value={trainer.nome} onChange={e => setTrainer({...trainer, nome: e.target.value})} /></div>
+
+            {/* IDENTITY INFO */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '10px', marginBottom: '15px' }}>
+              <div style={styles.sheetInputBox}><label style={styles.sheetLabel}>NAME</label><input style={styles.sheetInput} value={trainer.nome || ""} onChange={e => setTrainer({...trainer, nome: e.target.value})} /></div>
+              <div style={styles.sheetInputBox}><label style={styles.sheetLabel}>PLAYER</label><input style={styles.sheetInput} value={trainer.player || ""} onChange={e => setTrainer({...trainer, player: e.target.value})} /></div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '10px', marginBottom: '15px' }}>
+              <div style={styles.sheetInputBox}><label style={styles.sheetLabel}>AGE</label><input type="number" style={styles.sheetInput} value={trainer.age || ""} onChange={e => setTrainer({...trainer, age: parseInt(e.target.value) || 0})} /></div>
+              <div style={styles.sheetInputBox}><label style={styles.sheetLabel}>MONEY</label><input type="number" style={styles.sheetInput} value={trainer.money || 0} onChange={e => setTrainer({...trainer, money: parseInt(e.target.value) || 0})} /></div>
               <div style={styles.sheetInputBox}>
-                <label style={styles.sheetLabel}>RANGO</label>
+                <label style={styles.sheetLabel}>RANK</label>
                 <select style={{...styles.sheetInput, backgroundColor: '#252525', width: '100%', cursor: 'pointer'}} value={trainer.rango || "Starter"} onChange={e => setTrainer({...trainer, rango: e.target.value})}>
                   {rankList.map(r => <option key={r} value={r}>{r}</option>)}
                 </select>
               </div>
-              <div style={styles.sheetInputBox}><label style={styles.sheetLabel}>SOLDI</label><input type="number" style={styles.sheetInput} value={trainer.money} onChange={e => setTrainer({...trainer, money: e.target.value})} /></div>
             </div>
+
             {/* PARAMETRI VITALI ALLENATORE */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 150px), 1fr))', gap: '10px', marginTop: '15px' }}>
-              <div style={{...styles.sheetInputBox, backgroundColor: '#2d1b1b', borderColor: '#ff4757'}}>
-                <label style={{...styles.sheetLabel, color: '#ff4757', textAlign: 'center'}}>PUNTI SALUTE</label>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '15px', marginTop: '5px' }}>
-                  <button onClick={() => setTrainer({...trainer, currentHP: Math.max(0, trainer.currentHP - 1)})} style={styles.btnCircleMin}>-</button>
-                  <span style={{ fontSize: '22px', color: '#ff4757', fontWeight: 'bold' }}>{trainer.currentHP} / {trainer.stats.Vitality}</span>
-                  <button onClick={() => setTrainer({...trainer, currentHP: trainer.currentHP + 1})} style={styles.btnCircleMin}>+</button>
+              <div style={{...styles.sheetInputBox, backgroundColor: '#2d1b1b', borderColor: '#ff4757', alignItems: 'center', justifyContent: 'space-between'}}>
+                <label style={{...styles.sheetLabel, color: '#ff4757', textAlign: 'center'}}>HP</label>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '15px', margin: '10px 0' }}>
+                  <button onClick={() => setTrainer({...trainer, currentHP: Math.max(0, (trainer.currentHP !== undefined ? trainer.currentHP : 0) - 1)})} style={styles.btnCircleMin}>-</button>
+                  <span style={{ fontSize: '22px', color: '#ff4757', fontWeight: 'bold' }}>{trainer.currentHP !== undefined ? trainer.currentHP : 0} / {trainer.maxHP !== undefined ? trainer.maxHP : 4}</span>
+                  <button onClick={() => setTrainer({...trainer, currentHP: (trainer.currentHP !== undefined ? trainer.currentHP : 0) + 1})} style={styles.btnCircleMin}>+</button>
                 </div>
+                <button onClick={() => setTrainer({...trainer, maxHP: trainer.currentHP})} style={{background: 'transparent', border: '1px dashed #ff4757', color: '#ff4757', fontSize: '9px', borderRadius: '4px', cursor: 'pointer', padding: '4px', width: '100%', textTransform: 'uppercase'}}>SET STANDARD</button>
               </div>
 
-              <div style={{...styles.sheetInputBox, backgroundColor: '#1b2d2d', borderColor: '#4bcffa'}}>
-                <label style={{...styles.sheetLabel, color: '#4bcffa', textAlign: 'center'}}>VOLONTÀ</label>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '15px', marginTop: '5px' }}>
-                  <button onClick={() => setTrainer({...trainer, currentWill: Math.max(0, trainer.currentWill - 1)})} style={styles.btnCircleMinBlue}>-</button>
-                  <span style={{ fontSize: '22px', color: '#4bcffa', fontWeight: 'bold' }}>{trainer.currentWill} / {trainer.stats.Insight + 2}</span>
-                  <button onClick={() => setTrainer({...trainer, currentWill: trainer.currentWill + 1})} style={styles.btnCircleMinBlue}>+</button>
+              <div style={{...styles.sheetInputBox, backgroundColor: '#1b2d2d', borderColor: '#4bcffa', alignItems: 'center', justifyContent: 'space-between'}}>
+                <label style={{...styles.sheetLabel, color: '#4bcffa', textAlign: 'center'}}>WILL</label>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '15px', margin: '10px 0' }}>
+                  <button onClick={() => setTrainer({...trainer, currentWill: Math.max(0, (trainer.currentWill !== undefined ? trainer.currentWill : 0) - 1)})} style={styles.btnCircleMinBlue}>-</button>
+                  <span style={{ fontSize: '22px', color: '#4bcffa', fontWeight: 'bold' }}>{trainer.currentWill !== undefined ? trainer.currentWill : 0} / {trainer.maxWill !== undefined ? trainer.maxWill : 3}</span>
+                  <button onClick={() => setTrainer({...trainer, currentWill: (trainer.currentWill !== undefined ? trainer.currentWill : 0) + 1})} style={styles.btnCircleMinBlue}>+</button>
                 </div>
-              </div>
-            </div>
-
-            {/* STATISTICHE DERIVATE ALLENATORE */}
-            <div style={{...styles.sheetBox, marginTop: '15px', borderColor: '#555'}}>
-              <div style={{...styles.sheetBoxHeader, backgroundColor: '#555'}}>REAZIONI RAPIDE</div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', padding: '10px', textAlign: 'center' }}>
-                <div style={{cursor: 'pointer'}} onClick={() => tiraDadi(trainer.stats.Dexterity + (trainer.skills.Alert || 0), "Iniziativa Allenatore")}>
-                  <div style={{fontSize: '10px', color: '#aaa', fontWeight: 'bold'}}>INIZIATIVA</div>
-                  <div style={{fontSize: '18px', color: '#fff'}}>🎲 {trainer.stats.Dexterity + (trainer.skills.Alert || 0)}</div>
-                </div>
-                <div style={{cursor: 'pointer'}} onClick={() => tiraDadi(trainer.stats.Dexterity + (trainer.skills.Evasion || 0), "Evasione Allenatore")}>
-                  <div style={{fontSize: '10px', color: '#aaa', fontWeight: 'bold'}}>EVASIONE</div>
-                  <div style={{fontSize: '18px', color: '#fff'}}>🎲 {trainer.stats.Dexterity + (trainer.skills.Evasion || 0)}</div>
-                </div>
+                <button onClick={() => setTrainer({...trainer, maxWill: trainer.currentWill})} style={{background: 'transparent', border: '1px dashed #4bcffa', color: '#4bcffa', fontSize: '9px', borderRadius: '4px', cursor: 'pointer', padding: '4px', width: '100%', textTransform: 'uppercase'}}>SET STANDARD</button>
               </div>
             </div>
 
-            {/* ATTRIBUTI ALLENATORE */}
+            {/* ATTRIBUTI E ABILITÀ ALLENATORE */}
             <div style={{display: 'flex', gap: '20px', marginTop: '20px', flexWrap: 'wrap'}}>
-              <div style={{flex: '1', minWidth: '200px', display: 'flex', flexDirection: 'column', gap: '10px'}}>
-                <div style={{...styles.sheetBoxHeader, backgroundColor: '#444'}}>ATTRIBUTI</div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(80px, 1fr))', gap: '10px' }}>
-                  {Object.entries(trainer.stats).map(([k, v]) => (
-                    <div key={k} style={{...styles.sheetAttributeBox, minWidth: 'auto'}}>
-                      <label style={styles.sheetAttributeLabel}>{tradStats[k]}</label>
-                      <input type="number" value={v} onChange={e => setTrainer({...trainer, stats: {...trainer.stats, [k]: parseInt(e.target.value) || 0}})} style={{...styles.sheetAttributeInput, fontSize: '20px'}} />
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-            <div style={{display: 'flex', gap: '20px', marginTop: '20px', flexWrap: 'wrap'}}>
-              <div style={{flex: '0.8', display: 'flex', flexDirection: 'column', gap: '10px'}}>
-                <div style={{...styles.sheetBoxHeader, backgroundColor: '#444'}}>ATTRIBUTI</div>
-                {Object.entries(trainer.stats).map(([k, v]) => (
-                  <div key={k} style={styles.sheetAttributeBox}>
-                    <label style={styles.sheetAttributeLabel}>{tradStats[k]}</label>
-                    <input type="number" value={v} onChange={e => setTrainer({...trainer, stats: {...trainer.stats, [k]: parseInt(e.target.value) || 0}})} style={styles.sheetAttributeInput} />
+              
+              {/* COLONNA ATTRIBUTI */}
+              <div style={{flex: '1', minWidth: '250px', display: 'flex', flexDirection: 'column', gap: '15px'}}>
+                <div style={{...styles.sheetBox, marginBottom: 0}}>
+                  <div style={{...styles.sheetBoxHeader, backgroundColor: '#444'}}>PHYSICAL & MENTAL</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', padding: '10px' }}>
+                    {['Strength', 'Dexterity', 'Vitality', 'Insight'].map(k => (
+                      <div key={k} style={{...styles.sheetAttributeBox, minWidth: 'auto', padding: '8px'}}>
+                        <label style={{...styles.sheetAttributeLabel, fontSize: '10px'}}>{tradStats[k]}</label>
+                        <input type="number" value={trainer.stats?.[k] || 0} onChange={e => setTrainer({...trainer, stats: {...trainer.stats, [k]: parseInt(e.target.value) || 0}})} style={{...styles.sheetAttributeInput, fontSize: '22px'}} />
+                      </div>
+                    ))}
                   </div>
-                ))}
+                </div>
+
+                <div style={{...styles.sheetBox, marginBottom: 0}}>
+                  <div style={{...styles.sheetBoxHeader, backgroundColor: '#6c5ce7'}}>SOCIAL</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', padding: '10px' }}>
+                    {['Tough', 'Cool', 'Beauty', 'Cute', 'Clever'].map(k => (
+                      <div key={k} style={{...styles.sheetAttributeBox, minWidth: 'auto', padding: '8px', borderColor: '#6c5ce7'}}>
+                        <label style={{...styles.sheetAttributeLabel, fontSize: '10px', color: '#a29bfe'}}>{tradStats[k]}</label>
+                        <input type="number" value={trainer.stats?.[k] || 0} onChange={e => setTrainer({...trainer, stats: {...trainer.stats, [k]: parseInt(e.target.value) || 0}})} style={{...styles.sheetAttributeInput, fontSize: '22px', color: '#a29bfe'}} />
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
-              <div style={{flex: '2', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px'}}>
-                {renderTrainerSkillGroup("COMBATTIMENTO", ['Brawl', 'Throw', 'Evasion', 'Weapons'])}
-                {renderTrainerSkillGroup("SOPRAVVIVENZA", ['Alert', 'Athletic', 'Nature', 'Stealth', 'Survival'])}
-                {renderTrainerSkillGroup("SOCIALI", ['Allure', 'Etiquette', 'Intimidate', 'Perform'])}
-                {renderTrainerSkillGroup("CONOSCENZA", ['Crafts', 'Lore', 'Medicine', 'Science', 'Command'])}
+
+              {/* COLONNA ABILITÀ */}
+              <div style={{flex: '2', minWidth: '300px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '15px'}}>
+                {renderTrainerSkillGroup("FIGHT", ['Brawl', 'Throw', 'Evasion', 'Weapons'])}
+                {renderTrainerSkillGroup("SURVIVAL", ['Alert', 'Athletic', 'Nature', 'Stealth', 'Survival'])}
+                {renderTrainerSkillGroup("SOCIAL", ['Allure', 'Etiquette', 'Intimidate', 'Perform'])}
+                {renderTrainerSkillGroup("KNOWLEDGE", ['Crafts', 'Lore', 'Medicine', 'Science', 'Command'])}
               </div>
             </div>
             <div style={{marginTop: '25px', ...styles.sheetBox}}>
@@ -902,26 +892,28 @@ function App() {
 
                 {/* VITALI (PS, Volontà, Fiducia, Lealtà, EXP) */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 120px), 1fr))', gap: '10px', marginBottom: '20px' }}>
-                  <div style={{...styles.sheetInputBox, backgroundColor: '#2d1b1b', borderColor: '#ff4757'}}>
+                  <div style={{...styles.sheetInputBox, backgroundColor: '#2d1b1b', borderColor: '#ff4757', alignItems: 'center', justifyContent: 'space-between'}}>
                     <label style={{...styles.sheetLabel, color: '#ff4757', textAlign: 'center'}}>PS</label>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', marginTop: '5px' }}>
-                      <button onClick={() => setSquadra(squadra.map(x => x.id === p.id ? {...x, curHP: x.curHP-1} : x))} style={styles.btnCircleMin}>-</button>
-                      <span style={{ fontSize: '20px', color: '#ff4757', fontWeight: 'bold' }}>{p.curHP}/{p.Vitality}</span>
-                      <button onClick={() => setSquadra(squadra.map(x => x.id === p.id ? {...x, curHP: x.curHP+1} : x))} style={styles.btnCircleMin}>+</button>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', margin: '10px 0' }}>
+                      <button onClick={() => setSquadra(squadra.map(x => x.id === p.id ? {...x, curHP: Math.max(0, (x.curHP !== undefined ? x.curHP : 0) - 1)} : x))} style={styles.btnCircleMin}>-</button>
+                      <span style={{ fontSize: '20px', color: '#ff4757', fontWeight: 'bold' }}>{p.curHP !== undefined ? p.curHP : 0} / {p.maxHP !== undefined ? p.maxHP : 4}</span>
+                      <button onClick={() => setSquadra(squadra.map(x => x.id === p.id ? {...x, curHP: (x.curHP !== undefined ? x.curHP : 0) + 1} : x))} style={styles.btnCircleMin}>+</button>
                     </div>
+                    <button onClick={() => setSquadra(squadra.map(x => x.id === p.id ? {...x, maxHP: x.curHP} : x))} style={{background: 'transparent', border: '1px dashed #ff4757', color: '#ff4757', fontSize: '9px', borderRadius: '4px', cursor: 'pointer', padding: '4px', width: '100%', textTransform: 'uppercase'}}>SETTA STANDARD</button>
                   </div>
 
-                  <div style={{...styles.sheetInputBox, backgroundColor: '#1b2d2d', borderColor: '#4bcffa'}}>
+                  <div style={{...styles.sheetInputBox, backgroundColor: '#1b2d2d', borderColor: '#4bcffa', alignItems: 'center', justifyContent: 'space-between'}}>
                     <label style={{...styles.sheetLabel, color: '#4bcffa', textAlign: 'center'}}>VOLONTÀ</label>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', marginTop: '5px' }}>
-                      <button onClick={() => setSquadra(squadra.map(x => x.id === p.id ? {...x, curWill: x.curWill-1} : x))} style={styles.btnCircleMinBlue}>-</button>
-                      <span style={{ fontSize: '20px', color: '#4bcffa', fontWeight: 'bold' }}>{p.curWill || 0}/{p.Insight + 2}</span>
-                      <button onClick={() => setSquadra(squadra.map(x => x.id === p.id ? {...x, curWill: x.curWill+1} : x))} style={styles.btnCircleMinBlue}>+</button>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', margin: '10px 0' }}>
+                      <button onClick={() => setSquadra(squadra.map(x => x.id === p.id ? {...x, curWill: Math.max(0, (x.curWill !== undefined ? x.curWill : 0) - 1)} : x))} style={styles.btnCircleMinBlue}>-</button>
+                      <span style={{ fontSize: '20px', color: '#4bcffa', fontWeight: 'bold' }}>{p.curWill !== undefined ? p.curWill : 0} / {p.maxWill !== undefined ? p.maxWill : 3}</span>
+                      <button onClick={() => setSquadra(squadra.map(x => x.id === p.id ? {...x, curWill: (x.curWill !== undefined ? x.curWill : 0) + 1} : x))} style={styles.btnCircleMinBlue}>+</button>
                     </div>
+                    <button onClick={() => setSquadra(squadra.map(x => x.id === p.id ? {...x, maxWill: x.curWill} : x))} style={{background: 'transparent', border: '1px dashed #4bcffa', color: '#4bcffa', fontSize: '9px', borderRadius: '4px', cursor: 'pointer', padding: '4px', width: '100%', textTransform: 'uppercase'}}>SETTA STANDARD</button>
                   </div>
 
                   <div style={{...styles.sheetInputBox, backgroundColor: '#2d2d1b', borderColor: '#f1c40f'}}>
-                    <label style={{...styles.sheetLabel, color: '#f1c40f', textAlign: 'center'}}>FIDUCIA</label>
+                    <label style={{...styles.sheetLabel, color: '#f1c40f', textAlign: 'center'}}>CONFIDENCE</label>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', marginTop: '5px' }}>
                       <button onClick={() => setSquadra(squadra.map(x => x.id === p.id ? {...x, confidence: (x.confidence || 0) - 1} : x))} style={{...styles.btnCircleMin, borderColor: '#f1c40f', color: '#f1c40f'}}>-</button>
                       <span style={{ fontSize: '20px', color: '#f1c40f', fontWeight: 'bold' }}>{p.confidence || 0}</span>
@@ -930,7 +922,7 @@ function App() {
                   </div>
 
                   <div style={{...styles.sheetInputBox, backgroundColor: '#331b2d', borderColor: '#e84393'}}>
-                    <label style={{...styles.sheetLabel, color: '#e84393', textAlign: 'center'}}>LEALTÀ</label>
+                    <label style={{...styles.sheetLabel, color: '#e84393', textAlign: 'center'}}>LOYALTY</label>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', marginTop: '5px' }}>
                       <button onClick={() => setSquadra(squadra.map(x => x.id === p.id ? {...x, loyalty: Math.max(0, (x.loyalty || 0) - 1)} : x))} style={{...styles.btnCircleMin, borderColor: '#e84393', color: '#e84393'}}>-</button>
                       <span style={{ fontSize: '20px', color: '#e84393', fontWeight: 'bold' }}>{p.loyalty || 0}</span>
@@ -956,71 +948,115 @@ function App() {
                   </div>
                 </div>
 
-                {/* ATTRIBUTI E SKILL (Migliorati per Mobile) */}
-                <div style={{...styles.sheetBox, marginBottom: '20px'}}>
-                  <div style={{...styles.sheetBoxHeader, backgroundColor: '#444'}}>ATTRIBUTI</div>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(70px, 1fr))', gap: '8px', padding: '10px' }}>
-                    {['Strength', 'Dexterity', 'Vitality', 'Special', 'Insight'].map(s => (
-                      <div key={s} style={{...styles.sheetAttributeBox, padding: '5px', minWidth: 'auto'}}>
-                        <label style={{...styles.sheetAttributeLabel, fontSize: '9px', display: 'block'}}>{tradStats[s]}</label>
-                        <span style={{color: '#666', fontSize: '8px', display: 'block'}}>(Max {p['Max' + s] || '?'})</span>
-                        <input type="number" value={p[s]} onChange={e => setSquadra(squadra.map(x => x.id === p.id ? {...x, [s]: parseInt(e.target.value) || 0} : x))} style={{...styles.sheetAttributeInput, fontSize: '20px'}} />
+                {/* ATTRIBUTI E ABILITÀ POKEMON */}
+                <div style={{display: 'flex', gap: '20px', marginBottom: '20px', flexWrap: 'wrap'}}>
+                  {/* COLONNA ATTRIBUTI */}
+                  <div style={{flex: '1', minWidth: '250px', display: 'flex', flexDirection: 'column', gap: '15px'}}>
+                    <div style={{...styles.sheetBox, marginBottom: 0}}>
+                      <div style={{...styles.sheetBoxHeader, backgroundColor: '#444'}}>PHYSICAL & MENTAL</div>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(65px, 1fr))', gap: '8px', padding: '10px' }}>
+                        {['Strength', 'Dexterity', 'Vitality', 'Special', 'Insight'].map(s => (
+                          <div key={s} style={{...styles.sheetAttributeBox, padding: '5px', minWidth: 'auto'}}>
+                            <label style={{...styles.sheetAttributeLabel, fontSize: '9px', display: 'block'}}>{tradStats[s]}</label>
+                            <span style={{color: '#666', fontSize: '8px', display: 'block'}}>(Max {p['Max' + s] || '?'})</span>
+                            <input type="number" value={p[s] || 0} onChange={e => setSquadra(squadra.map(x => x.id === p.id ? {...x, [s]: parseInt(e.target.value) || 0} : x))} style={{...styles.sheetAttributeInput, fontSize: '20px'}} />
+                          </div>
+                        ))}
                       </div>
-                    ))}
+                    </div>
+
+                    <div style={{...styles.sheetBox, marginBottom: 0}}>
+                      <div style={{...styles.sheetBoxHeader, backgroundColor: '#6c5ce7'}}>SOCIAL</div>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(65px, 1fr))', gap: '8px', padding: '10px' }}>
+                        {['Tough', 'Cool', 'Beauty', 'Cute', 'Clever'].map(s => (
+                          <div key={s} style={{...styles.sheetAttributeBox, padding: '5px', minWidth: 'auto', borderColor: '#6c5ce7'}}>
+                            <label style={{...styles.sheetAttributeLabel, fontSize: '9px', display: 'block', color: '#a29bfe'}}>{tradStats[s]}</label>
+                            <input type="number" value={p[s] || 0} onChange={e => setSquadra(squadra.map(x => x.id === p.id ? {...x, [s]: parseInt(e.target.value) || 0} : x))} style={{...styles.sheetAttributeInput, fontSize: '20px', color: '#a29bfe'}} />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* COLONNA ABILITÀ E DERIVATE */}
+                  <div style={{flex: '2', minWidth: '300px', display: 'flex', flexDirection: 'column', gap: '15px'}}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '15px' }}>
+                      {renderPkmSkillGroup("FIGHT", ['Brawl', 'Channel', 'Clash', 'Evasion'], p)}
+                      {renderPkmSkillGroup("SURVIVAL", ['Alert', 'Athletic', 'Nature', 'Stealth'], p)}
+                      {renderPkmSkillGroup("SOCIAL", ['Allure', 'Etiquette', 'Intimidate', 'Perform'], p)}
+                    </div>
+
+                    {/* STATISTICHE DERIVATE */}
+                    <div style={{...styles.sheetBox, marginTop: '5px'}}>
+                      <div style={styles.sheetBoxHeader}>DERIVED STATS</div>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(70px, 1fr))', gap: '10px', padding: '15px', textAlign: 'center' }}>
+                        <div>
+                          <div style={{fontSize: '11px', color: '#aaa', fontWeight: 'bold'}}>INITIATIVE</div>
+                          <div style={{fontSize: '20px', color: '#fff', fontWeight: 'bold'}}>{(p.Dexterity || 0) + (p.pkmSkills?.Alert || 0)}</div>
+                        </div>
+                        <div>
+                          <div style={{fontSize: '11px', color: '#aaa', fontWeight: 'bold'}}>EVASION</div>
+                          <div style={{fontSize: '20px', color: '#fff', fontWeight: 'bold'}}>{(p.Dexterity || 0) + (p.pkmSkills?.Evasion || 0)}</div>
+                        </div>
+                        <div>
+                          <div style={{fontSize: '11px', color: '#aaa', fontWeight: 'bold'}}>CLASH</div>
+                          <div style={{fontSize: '20px', color: '#fff', fontWeight: 'bold'}}>{(p.Strength || 0) + (p.pkmSkills?.Clash || 0)}</div>
+                        </div>
+                        <div>
+                          <div style={{fontSize: '11px', color: '#aaa', fontWeight: 'bold'}}>DEFENSE</div>
+                          <div style={{fontSize: '20px', color: '#fff', fontWeight: 'bold'}}>{p.Vitality || 0}</div>
+                        </div>
+                        <div>
+                          <div style={{fontSize: '11px', color: '#aaa', fontWeight: 'bold'}}>SP. DEFENSE</div>
+                          <div style={{fontSize: '20px', color: '#fff', fontWeight: 'bold'}}>{p.Insight || 0}</div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 150px), 1fr))', gap: '15px' }}>
-                  {renderPkmSkillGroup("LOTTA", ['Brawl', 'Channel', 'Clash', 'Evasion'], p)}
-                  {renderPkmSkillGroup("SOPRAVVIVENZA", ['Alert', 'Athletic', 'Nature', 'Stealth'], p)}
-                  {renderPkmSkillGroup("SOCIALE", ['Allure', 'Etiquette', 'Intimidate', 'Perform'], p)}
-                </div>
-
-                {/* STATISTICHE DERIVATE */}
-                <div style={{...styles.sheetBox, marginTop: '20px'}}>
-                  <div style={styles.sheetBoxHeader}>STATISTICHE DERIVATE</div>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(80px, 1fr))', gap: '10px', padding: '15px', textAlign: 'center' }}>
-                    <div style={{cursor: 'pointer'}} onClick={() => tiraDadi(p.Dexterity + (p.pkmSkills?.Alert || 0), "Iniziativa")}>
-                      <div style={{fontSize: '11px', color: '#aaa', fontWeight: 'bold'}}>INIZIATIVA</div>
-                      <div style={{fontSize: '20px', color: '#fff'}}>🎲 {p.Dexterity + (p.pkmSkills?.Alert || 0)}</div>
-                    </div>
-                    <div style={{cursor: 'pointer'}} onClick={() => tiraDadi(p.Dexterity + (p.pkmSkills?.Evasion || 0), "Evasione")}>
-                      <div style={{fontSize: '11px', color: '#aaa', fontWeight: 'bold'}}>EVASIONE</div>
-                      <div style={{fontSize: '20px', color: '#fff'}}>🎲 {p.Dexterity + (p.pkmSkills?.Evasion || 0)}</div>
-                    </div>
-                    <div>
-                      <div style={{fontSize: '11px', color: '#aaa', fontWeight: 'bold'}}>DIF. FISICA</div>
-                      <div style={{fontSize: '20px', color: '#fff'}}>🛡️ {p.Vitality}</div>
-                    </div>
-                    <div>
-                      <div style={{fontSize: '11px', color: '#aaa', fontWeight: 'bold'}}>DIF. SPEC.</div>
-                      <div style={{fontSize: '20px', color: '#fff'}}>✨ {p.Insight}</div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* MOSSE */}
+                {/* MOSSE POKEMON */}
                 <div style={{ marginTop: '25px', ...styles.sheetBox }}>
-                  <div style={styles.sheetBoxHeader}>MOSSE</div>
+                  <div style={{...styles.sheetBoxHeader, backgroundColor: '#c23616'}}>MOVES</div>
                   <div style={{ padding: '15px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 250px), 1fr))', gap: '15px' }}>
                     {[0, 1, 2, 3].map(i => {
                       const mossaNome = p.selectedMoves[i];
                       const info = dettagliMosse[mossaNome];
-                      let baseStat = 0, accVal = 0, dmgVal = "-", skillUsata = 0, isStab = false;
+                      let accTotal = 0, dmgTotal = "-", accString = "", dmgString = "", isStab = false;
+                      
                       if (info) {
-                        baseStat = info.Category === "Special" ? p.Special : (info.Category === "Physical" ? p.Strength : Math.max(p.Insight, p.Dexterity));
-                        accVal = parseInt(info.Accuracy) || 0;
-                        dmgVal = parseInt(info.Power || info.Damage) || "-";
-                        skillUsata = info.Category === "Special" ? (p.pkmSkills?.Channel || 0) : (p.pkmSkills?.Brawl || 0);
+                        const accVal = parseInt(info.Accuracy) || 0;
+                        const dmgVal = parseInt(info.Power || info.Damage) || "-";
                         isStab = (info.Type === p.Type1 || info.Type === p.Type2) && info.Type !== "None";
+                        
+                        // Logica Calcolo Dadi in base alla Categoria della mossa
+                        let accAttrStr = "Dexterity";
+                        let accAttrVal = p.Dexterity || 0;
+                        let dmgAttrStr = info.Category === "Special" ? "Special" : "Strength";
+                        let dmgAttrVal = p[dmgAttrStr] || 0;
+                        let skillStr = info.Category === "Special" ? "Channel" : "Brawl";
+                        let skillVal = p.pkmSkills?.[skillStr] || 0;
+
+                        if (info.Category === "Support") {
+                           accAttrStr = "Insight";
+                           accAttrVal = p.Insight || 0;
+                           skillStr = "Nature"; // Le mosse di supporto usano spesso Nature o Channel
+                           skillVal = p.pkmSkills?.[skillStr] || 0;
+                        }
+
+                        accTotal = accAttrVal + skillVal + accVal;
+                        accString = `(${tradStats[accAttrStr]} + ${tradPkmSkills[skillStr]} + ${accVal} Acc)`;
+
+                        if (dmgVal !== "-") {
+                           dmgTotal = dmgAttrVal + dmgVal + (isStab ? 1 : 0);
+                           dmgString = `(${tradStats[dmgAttrStr]} + ${dmgVal} Pwr${isStab ? ' + 1 STAB' : ''})`;
+                        }
                       }
-                      const prec = baseStat + skillUsata + accVal;
-                      const dmgFinale = dmgVal === "-" ? "-" : (baseStat + dmgVal + (isStab ? 1 : 0));
 
                       return (
                         <div key={i} style={styles.sheetMoveCard}>
                           <select 
-                            style={{...styles.sheetInput, backgroundColor: '#252525', width: '100%', cursor: 'pointer', outline: 'none', border: 'none'}} 
+                            style={{...styles.sheetInput, backgroundColor: '#252525', width: '100%', cursor: 'pointer', outline: 'none', border: 'none', borderBottom: '2px solid #555', paddingBottom: '5px', marginBottom: '10px'}} 
                             value={mossaNome} 
                             onChange={(e) => {
                               const nuovaMossa = e.target.value;
@@ -1048,16 +1084,31 @@ function App() {
                               return <option key={m.Name} value={m.Name}>{tMossa(m.Name)} [{r}]</option>;
                             })}
                           </select>
+                          
                           {info && (
-                            <div style={{marginTop: 10, borderTop: `2px solid ${typeColors[info.Type]}`, paddingTop: 10}}>
-                              <div style={{display:'flex', justifyContent:'space-between', fontSize: 14}}>
-                                <span style={{color: typeColors[info.Type], fontWeight:'bold'}}>{tradTipi[info.Type]}</span>
-                                <span>{tCatMosse(info.Category)}</span>
-                                <span style={{cursor:'pointer'}} onClick={() => tiraDadi(prec, tMossa(mossaNome))}>
-                                  🎲 {prec} | 💥 {dmgFinale} {isStab && <span style={{color: '#f1c40f', fontSize: '10px'}}>STAB</span>}
-                                </span>
+                            <div style={{fontSize: '12px'}}>
+                              <div style={{display:'flex', justifyContent:'space-between', marginBottom: '8px'}}>
+                                <span style={{...styles.typeBadge, backgroundColor: typeColors[info.Type]}}>{tradTipi[info.Type]}</span>
+                                <span style={{fontWeight: 'bold', color: '#ccc'}}>{info.Category.toUpperCase()}</span>
                               </div>
-                              <div style={{fontSize: 12, color:'#aaa', fontStyle:'italic', marginTop: 5}}>{info.Effect || info.Description}</div>
+                              
+                              <div style={{backgroundColor: '#1a1a1a', padding: '8px', borderRadius: '6px', borderLeft: `3px solid ${typeColors[info.Type]}`}}>
+                                <div style={{marginBottom: '5px'}}>
+                                  <strong style={{color: '#fff'}}>🎯 ACCURACY: <span style={{color: '#2ed573', fontSize: '14px'}}>{accTotal} Dice</span></strong>
+                                  <div style={{fontSize: '9px', color: '#888'}}>{accString}</div>
+                                </div>
+                                
+                                {dmgTotal !== "-" && (
+                                  <div style={{marginBottom: '5px'}}>
+                                    <strong style={{color: '#fff'}}>💥 DAMAGE: <span style={{color: '#ff4757', fontSize: '14px'}}>{dmgTotal} Dice</span></strong>
+                                    <div style={{fontSize: '9px', color: '#888'}}>{dmgString}</div>
+                                  </div>
+                                )}
+                                
+                                <div style={{fontSize: '11px', color:'#aaa', fontStyle:'italic', marginTop: '8px', borderTop: '1px solid #333', paddingTop: '5px'}}>
+                                  {info.Effect || info.Description}
+                                </div>
+                              </div>
                             </div>
                           )}
                         </div>
@@ -1085,39 +1136,196 @@ function App() {
             )}
           </div>
         )}
-      </div>
-      {/* LOG DEI DADI GRAFICO */}
-      {diceLog.length > 0 && (
-        <div style={styles.diceLogContainer}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', borderBottom: '1px solid #444', pb: '5px' }}>
-            <span style={{ fontSize: '10px', fontWeight: 'bold', color: '#ff4757' }}>LOG RECENTE</span>
-            <button onClick={() => setDiceLog([])} style={{ background: 'none', border: 'none', color: '#888', cursor: 'pointer', fontSize: '10px' }}>Pulisci</button>
-          </div>
-          {diceLog.map(t => (
-            <div key={t.id} style={styles.diceEntry}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: '#aaa' }}>
-                <span>{t.nome}</span>
-                <span>{t.timestamp}</span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '3px' }}>
-                <div style={{ flex: 1, display: 'flex', flexWrap: 'wrap', gap: '3px' }}>
-                  {t.dadi.map((d, idx) => (
-                    <span key={idx} style={{ 
-                      ...styles.miniDie, 
-                      backgroundColor: d >= 4 ? '#2ed573' : '#444',
-                      borderColor: d === 6 ? '#f1c40f' : 'transparent'
-                    }}>{d}</span>
-                  ))}
+        {tab === "battaglia" && (
+          <div style={{display: 'flex', flexDirection: 'column', gap: '20px'}}>
+            
+            {/* BOX ALLENATORE COMPATTO */}
+            <div style={{...styles.physicalSheet, borderTop: '5px solid #fff'}}>
+              <div style={styles.sheetHeader}><h2 style={{margin: 0}}>TRAINER: {trainer.nome || "Allenatore"}</h2></div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 150px), 1fr))', gap: '10px' }}>
+                <div style={{...styles.sheetInputBox, backgroundColor: '#2d1b1b', borderColor: '#ff4757', alignItems: 'center', justifyContent: 'space-between'}}>
+                  <label style={{...styles.sheetLabel, color: '#ff4757'}}>HP</label>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '15px', margin: '5px 0' }}>
+                    <button onClick={() => setTrainer({...trainer, currentHP: Math.max(0, (trainer.currentHP !== undefined ? trainer.currentHP : 0) - 1)})} style={styles.btnCircleMin}>-</button>
+                    <span style={{ fontSize: '22px', color: '#ff4757', fontWeight: 'bold' }}>{trainer.currentHP !== undefined ? trainer.currentHP : 0} / {trainer.maxHP !== undefined ? trainer.maxHP : 4}</span>
+                    <button onClick={() => setTrainer({...trainer, currentHP: (trainer.currentHP !== undefined ? trainer.currentHP : 0) + 1})} style={styles.btnCircleMin}>+</button>
+                  </div>
                 </div>
-                <div style={{ textAlign: 'center', minWidth: '40px' }}>
-                  <div style={{ fontSize: '18px', color: '#fff', fontWeight: 'bold' }}>{t.successi}</div>
-                  <div style={{ fontSize: '8px', color: '#2ed573' }}>SUCCESSI</div>
+                <div style={{...styles.sheetInputBox, backgroundColor: '#1b2d2d', borderColor: '#4bcffa', alignItems: 'center', justifyContent: 'space-between'}}>
+                  <label style={{...styles.sheetLabel, color: '#4bcffa'}}>WILL</label>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '15px', margin: '5px 0' }}>
+                    <button onClick={() => setTrainer({...trainer, currentWill: Math.max(0, (trainer.currentWill !== undefined ? trainer.currentWill : 0) - 1)})} style={styles.btnCircleMinBlue}>-</button>
+                    <span style={{ fontSize: '22px', color: '#4bcffa', fontWeight: 'bold' }}>{trainer.currentWill !== undefined ? trainer.currentWill : 0} / {trainer.maxWill !== undefined ? trainer.maxWill : 3}</span>
+                    <button onClick={() => setTrainer({...trainer, currentWill: (trainer.currentWill !== undefined ? trainer.currentWill : 0) + 1})} style={styles.btnCircleMinBlue}>+</button>
+                  </div>
                 </div>
               </div>
             </div>
-          ))}
-        </div>
-      )}
+
+            {/* SEZIONE RICERCA AVVERSARIO */}
+            <div style={{...styles.physicalSheet, border: '1px solid #444'}}>
+              <div style={styles.sheetInputBox}>
+                <label style={styles.sheetLabel}>RADAR AVVERSARIO (Ricerca Rapida Pokédex)</label>
+                <div style={{display: 'flex', gap: '10px', marginTop: '10px'}}>
+                  <input list="pokemon-radar" style={styles.searchBar} value={ricercaAvversario} onChange={e => setRicercaAvversario(e.target.value)} placeholder="Nome Avversario..." />
+                  <datalist id="pokemon-radar">{listaPokemon.map(pkm => <option key={pkm} value={pkm}>{tNomePkm(pkm)}</option>)}</datalist>
+                  <button onClick={cercaAvversario} style={styles.btnCercaMini}>CERCA</button>
+                </div>
+              </div>
+
+              {avversario && (
+                <div style={{marginTop: '15px', backgroundColor: '#1a1a1a', borderRadius: '10px', border: `2px solid ${typeColors[avversario.Type1] || '#444'}`, padding: '15px'}}>
+                  <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start'}}>
+                    <div style={{display: 'flex', alignItems: 'center', gap: '15px'}}>
+                      <div style={{backgroundColor: '#222', borderRadius: '50%', width: '50px', height: '50px', display: 'flex', justifyContent: 'center', alignItems: 'center'}}>
+                        {renderImmagine('pokemon', avversario.currentForm || avversario.Name, {width: '40px', height: '40px', objectFit: 'contain'})}
+                      </div>
+                      <div>
+                        <h3 style={{margin: 0, color: '#fff'}}>{tNomePkm(avversario.currentForm || avversario.Name)}</h3>
+                        <div style={{display: 'flex', gap: '5px', marginTop: '5px'}}>
+                          <span style={{...styles.typeBadge, backgroundColor: typeColors[avversario.Type1]}}>{tradTipi[avversario.Type1]}</span>
+                          {avversario.Type2 && avversario.Type2 !== "None" && <span style={{...styles.typeBadge, backgroundColor: typeColors[avversario.Type2]}}>{tradTipi[avversario.Type2]}</span>}
+                        </div>
+                      </div>
+                    </div>
+                    <button onClick={() => setAvversario(null)} style={{background: 'none', border: 'none', color: '#ff4757', cursor: 'pointer', fontSize: '18px'}}>✖</button>
+                  </div>
+
+                  {/* STATISTICHE BASE E DEBOLEZZE */}
+                  <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px', marginTop: '15px'}}>
+                    <div style={{backgroundColor: '#111', padding: '10px', borderRadius: '8px'}}>
+                      <div style={{fontSize: '11px', color: '#aaa', fontWeight: 'bold', marginBottom: '8px'}}>STATISTICHE BASE (Senza Abilità)</div>
+                      <div style={{display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: '#ddd'}}><span>Iniziativa Base:</span> <strong>{avversario.Dexterity}</strong></div>
+                      <div style={{display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: '#ddd'}}><span>Evasione Base:</span> <strong>{avversario.Dexterity}</strong></div>
+                      <div style={{display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: '#ddd'}}><span>Difesa Base:</span> <strong>{avversario.Vitality}</strong></div>
+                      <div style={{display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: '#ddd'}}><span>Difesa Spec. Base:</span> <strong>{avversario.Insight}</strong></div>
+                      <div style={{display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: '#ff4757', marginTop: '5px', paddingTop: '5px', borderTop: '1px solid #333'}}><span>PS Max Stimati:</span> <strong>{(avversario.BaseHP || 0) + avversario.Vitality}</strong></div>
+                    </div>
+
+                    {(() => {
+                       const eff = calcolaDebRes(avversario.Type1, avversario.Type2);
+                       return (
+                         <div style={{backgroundColor: '#111', padding: '10px', borderRadius: '8px'}}>
+                           <div style={{fontSize: '11px', color: '#aaa', fontWeight: 'bold', marginBottom: '8px'}}>MOLTIPLICATORI DANNO</div>
+                           {eff[4].length > 0 && <div style={{fontSize: '11px', marginBottom: '3px'}}><strong style={{color: '#ff4757', display: 'inline-block', width: '85px'}}>Danno x4:</strong> {eff[4].map(t => <span key={t} style={{...styles.typeBadgeMini, backgroundColor: typeColors[t]}}>{tradTipi[t]}</span>)}</div>}
+                           {eff[2].length > 0 && <div style={{fontSize: '11px', marginBottom: '3px'}}><strong style={{color: '#ff6b81', display: 'inline-block', width: '85px'}}>Danno x2:</strong> {eff[2].map(t => <span key={t} style={{...styles.typeBadgeMini, backgroundColor: typeColors[t]}}>{tradTipi[t]}</span>)}</div>}
+                           {eff[0.5].length > 0 && <div style={{fontSize: '11px', marginBottom: '3px'}}><strong style={{color: '#2ed573', display: 'inline-block', width: '85px'}}>Danno x0.5:</strong> {eff[0.5].map(t => <span key={t} style={{...styles.typeBadgeMini, backgroundColor: typeColors[t]}}>{tradTipi[t]}</span>)}</div>}
+                           {eff[0.25].length > 0 && <div style={{fontSize: '11px', marginBottom: '3px'}}><strong style={{color: '#1e90ff', display: 'inline-block', width: '85px'}}>Danno x0.25:</strong> {eff[0.25].map(t => <span key={t} style={{...styles.typeBadgeMini, backgroundColor: typeColors[t]}}>{tradTipi[t]}</span>)}</div>}
+                           {eff[0].length > 0 && <div style={{fontSize: '11px', marginBottom: '3px'}}><strong style={{color: '#a4b0be', display: 'inline-block', width: '85px'}}>Immune x0:</strong> {eff[0].map(t => <span key={t} style={{...styles.typeBadgeMini, backgroundColor: typeColors[t]}}>{tradTipi[t]}</span>)}</div>}
+                         </div>
+                       );
+                    })()}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* SELEZIONE POKEMON ATTIVO */}
+            <div style={styles.physicalSheet}>
+              <div style={styles.sheetInputBox}>
+                <label style={styles.sheetLabel}>POKÉMON IN CAMPO</label>
+                <select 
+                  style={{...styles.sheetInput, backgroundColor: '#252525', width: '100%', cursor: 'pointer', padding: '10px'}} 
+                  value={activePkmId || ""} 
+                  onChange={e => setActivePkmId(parseInt(e.target.value) || null)}
+                >
+                  <option value="">-- Manda in campo un Pokémon --</option>
+                  {squadra.map(p => (
+                    <option key={p.id} value={p.id}>{tNomePkm(p.currentForm || p.Name)} (HP: {p.curHP}/{p.maxHP})</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* BOX POKEMON ATTIVO (Mostrato solo se selezionato) */}
+            {activePkmId && squadra.find(p => p.id === activePkmId) && (() => {
+              const p = squadra.find(p => p.id === activePkmId);
+              return (
+                <div style={{...styles.physicalSheet, borderTop: `5px solid ${typeColors[p.Type1] || '#ff4757'}`}}>
+                  <div style={{display: 'flex', alignItems: 'center', gap: '15px', borderBottom: '2px solid #555', paddingBottom: '10px', marginBottom: '15px'}}>
+                    <div style={{backgroundColor: '#222', borderRadius: '50%', padding: '5px', width: '60px', height: '60px', display: 'flex', justifyContent: 'center', alignItems: 'center'}}>
+                      {renderImmagine('pokemon', p.currentForm || p.Name, {width: '50px', height: '50px', objectFit: 'contain'})}
+                    </div>
+                    <div>
+                      <h2 style={{margin: 0}}>{tNomePkm(p.currentForm || p.Name)}</h2>
+                      <div style={{display: 'flex', gap: '5px', marginTop: '5px'}}>
+                        <span style={{...styles.typeBadge, backgroundColor: typeColors[p.Type1]}}>{tradTipi[p.Type1]}</span>
+                        {p.Type2 && p.Type2 !== "None" && <span style={{...styles.typeBadge, backgroundColor: typeColors[p.Type2]}}>{tradTipi[p.Type2]}</span>}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* VITALI POKEMON COMPATTI */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 150px), 1fr))', gap: '10px', marginBottom: '20px' }}>
+                    <div style={{...styles.sheetInputBox, backgroundColor: '#2d1b1b', borderColor: '#ff4757', alignItems: 'center', justifyContent: 'space-between'}}>
+                      <label style={{...styles.sheetLabel, color: '#ff4757'}}>HP</label>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '15px', margin: '5px 0' }}>
+                        <button onClick={() => setSquadra(squadra.map(x => x.id === p.id ? {...x, curHP: Math.max(0, (x.curHP !== undefined ? x.curHP : 0) - 1)} : x))} style={styles.btnCircleMin}>-</button>
+                        <span style={{ fontSize: '20px', color: '#ff4757', fontWeight: 'bold' }}>{p.curHP !== undefined ? p.curHP : 0} / {p.maxHP !== undefined ? p.maxHP : 4}</span>
+                        <button onClick={() => setSquadra(squadra.map(x => x.id === p.id ? {...x, curHP: (x.curHP !== undefined ? x.curHP : 0) + 1} : x))} style={styles.btnCircleMin}>+</button>
+                      </div>
+                    </div>
+                    <div style={{...styles.sheetInputBox, backgroundColor: '#1b2d2d', borderColor: '#4bcffa', alignItems: 'center', justifyContent: 'space-between'}}>
+                      <label style={{...styles.sheetLabel, color: '#4bcffa'}}>WILL</label>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '15px', margin: '5px 0' }}>
+                        <button onClick={() => setSquadra(squadra.map(x => x.id === p.id ? {...x, curWill: Math.max(0, (x.curWill !== undefined ? x.curWill : 0) - 1)} : x))} style={styles.btnCircleMinBlue}>-</button>
+                        <span style={{ fontSize: '20px', color: '#4bcffa', fontWeight: 'bold' }}>{p.curWill !== undefined ? p.curWill : 0} / {p.maxWill !== undefined ? p.maxWill : 3}</span>
+                        <button onClick={() => setSquadra(squadra.map(x => x.id === p.id ? {...x, curWill: (x.curWill !== undefined ? x.curWill : 0) + 1} : x))} style={styles.btnCircleMinBlue}>+</button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* STATISTICHE DERIVATE RAPIDE */}
+                  <div style={{ display: 'flex', justifyContent: 'space-around', backgroundColor: '#222', padding: '10px', borderRadius: '10px', marginBottom: '20px', border: '1px solid #444', textAlign: 'center' }}>
+                    <div><div style={{fontSize: '9px', color: '#aaa'}}>INITIATIVE</div><div style={{fontSize: '16px', fontWeight: 'bold'}}>{(p.Dexterity || 0) + (p.pkmSkills?.Alert || 0)}</div></div>
+                    <div><div style={{fontSize: '9px', color: '#aaa'}}>EVASION</div><div style={{fontSize: '16px', fontWeight: 'bold'}}>{(p.Dexterity || 0) + (p.pkmSkills?.Evasion || 0)}</div></div>
+                    <div><div style={{fontSize: '9px', color: '#aaa'}}>CLASH</div><div style={{fontSize: '16px', fontWeight: 'bold'}}>{(p.Strength || 0) + (p.pkmSkills?.Clash || 0)}</div></div>
+                    <div><div style={{fontSize: '9px', color: '#aaa'}}>DEFENSE</div><div style={{fontSize: '16px', fontWeight: 'bold'}}>{p.Vitality || 0}</div></div>
+                    <div><div style={{fontSize: '9px', color: '#aaa'}}>SP. DEF.</div><div style={{fontSize: '16px', fontWeight: 'bold'}}>{p.Insight || 0}</div></div>
+                  </div>
+
+                  {/* MOSSE IN EVIDENZA */}
+                  <div style={{...styles.sheetBoxHeader, backgroundColor: '#c23616', borderRadius: '5px 5px 0 0'}}>MOVES</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 250px), 1fr))', gap: '10px', backgroundColor: '#222', padding: '15px', borderRadius: '0 0 10px 10px', border: '1px solid #444' }}>
+                    {[0, 1, 2, 3].map(i => {
+                      const mossaNome = p.selectedMoves[i];
+                      const info = dettagliMosse[mossaNome];
+                      if (!info) return null; // Mostra solo le mosse equipaggiate
+                      
+                      const isStab = (info.Type === p.Type1 || info.Type === p.Type2) && info.Type !== "None";
+                      let accAttrStr = "Dexterity", accAttrVal = p.Dexterity || 0;
+                      let dmgAttrStr = info.Category === "Special" ? "Special" : "Strength", dmgAttrVal = p[dmgAttrStr] || 0;
+                      let skillStr = info.Category === "Special" ? "Channel" : "Brawl", skillVal = p.pkmSkills?.[skillStr] || 0;
+
+                      if (info.Category === "Support") {
+                         accAttrStr = "Insight"; accAttrVal = p.Insight || 0;
+                         skillStr = "Nature"; skillVal = p.pkmSkills?.[skillStr] || 0;
+                      }
+
+                      const accTotal = accAttrVal + skillVal + (parseInt(info.Accuracy) || 0);
+                      const dmgTotal = parseInt(info.Power || info.Damage) ? (dmgAttrVal + parseInt(info.Power || info.Damage) + (isStab ? 1 : 0)) : "-";
+
+                      return (
+                        <div key={i} style={{...styles.sheetMoveCard, backgroundColor: '#1a1a1a', borderLeft: `4px solid ${typeColors[info.Type]}`}}>
+                          <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px'}}>
+                            <strong style={{fontSize: '16px', color: '#fff'}}>{tMossa(mossaNome)}</strong>
+                            <span style={styles.typeBadgeMini}>{info.Category}</span>
+                          </div>
+                          <div style={{display: 'flex', gap: '15px', marginBottom: '5px'}}>
+                            <span style={{color: '#aaa', fontSize: '12px'}}>🎯 Acc: <strong style={{color: '#2ed573'}}>{accTotal}</strong></span>
+                            {dmgTotal !== "-" && <span style={{color: '#aaa', fontSize: '12px'}}>💥 Dmg: <strong style={{color: '#ff4757'}}>{dmgTotal}</strong></span>}
+                          </div>
+                          <div style={{fontSize: '10px', color: '#888', fontStyle: 'italic'}}>{info.Effect || info.Description}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+        )}
+      </div>  
     </div>
   );
 }
