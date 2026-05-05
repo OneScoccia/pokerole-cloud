@@ -330,6 +330,9 @@ function App() {
   const [activePkmId, setActivePkmId] = useState(null);
   const [ricercaAvversario, setRicercaAvversario] = useState("");
   const [avversario, setAvversario] = useState(null);
+  const [pokedexProgress, setPokedexProgress] = useState({});
+  const [pokedexFiltro, setPokedexFiltro] = useState("all");
+  const [pokedexFiltroNome, setPokedexFiltroNome] = useState("");
   
   const [trainer, setTrainer] = useState({
     nome: "", player: "", age: 15,
@@ -356,6 +359,7 @@ function App() {
             if (data.trainer) setTrainer(data.trainer);
             if (data.squadra) setSquadra(data.squadra);
             if (data.zaino) setZaino(data.zaino);
+            if (data.pokedexProgress) setPokedexProgress(data.pokedexProgress);
           }
         } catch (error) {
           console.error("Errore nel caricamento dati:", error);
@@ -403,7 +407,7 @@ function App() {
     if (!user) return;
     try {
       await setDoc(doc(db, "utenti", user.uid), {
-        trainer, squadra, zaino
+        trainer, squadra, zaino, pokedexProgress
       });
       alert("✅ Salvataggio sul Cloud completato con successo!");
     } catch (err) {
@@ -637,6 +641,7 @@ function App() {
         src={getUrl(nomeFormattato)}
         alt={nome} 
         style={stile} 
+        loading="lazy"
         onError={(e) => { 
           if (tipo === 'pokemon') {
             if (!e.target.dataset.triedNoForm && nomeFormattato.includes('-form')) {
@@ -657,6 +662,19 @@ function App() {
         }} 
       />
     );
+  };
+
+  const togglePokedex = (nomePkm, status) => {
+    setPokedexProgress(prev => {
+      const current = prev[nomePkm];
+      const newState = { ...prev };
+      if (current === status) {
+        delete newState[nomePkm]; // Se clicchi di nuovo, lo deseleziona
+      } else {
+        newState[nomePkm] = status; // Imposta 'visto' o 'catturato'
+      }
+      return newState;
+    });
   };
 
   const renderTrainerSkillGroup = (title, skillsArray) => (
@@ -1206,17 +1224,81 @@ function App() {
         )}
 
         {tab === "pokedex" && (
-          <div style={{textAlign:'center'}}>
-            <input list="pokemon-disponibili" style={styles.bigSearch} value={ricerca} onChange={e => setRicerca(e.target.value)} placeholder="Nome Pokémon..." />
-            <datalist id="pokemon-disponibili">{listaPokemon.map(pkm => <option key={pkm} value={pkm}>{tNomePkm(pkm)}</option>)}</datalist>
-            <button onClick={cercaPokemon} style={styles.btnCerca}>CERCA</button>
-            {pkmTrovato && (
-              <div style={styles.card}>
-                <div style={{backgroundColor:'#222', borderRadius:20, padding:15, display:'inline-block'}}>{renderImmagine('pokemon', pkmTrovato.currentForm || pkmTrovato.Name, {width: 130})}</div>
-                <h2 style={{color: '#fff'}}>{tNomePkm(pkmTrovato.currentForm || pkmTrovato.Name)}</h2>
-                <button onClick={aggiungiASquadra} style={styles.btnSuccess}>AGGIUNGI AL TEAM</button>
+          <div style={{display: 'flex', flexDirection: 'column', gap: '20px'}}>
+            
+            {/* PANNELLO DI RICERCA E AGGIUNTA SQUADRA */}
+            <div style={styles.physicalSheet}>
+              <div style={styles.sheetHeader}><h2 style={{margin: 0}}>RICERCA DATI POKÉMON</h2></div>
+              <div style={{display: 'flex', gap: '10px', marginBottom: '15px'}}>
+                <input list="pokemon-disponibili" style={styles.searchBar} value={ricerca} onChange={e => setRicerca(e.target.value)} placeholder="Cerca nel database per scaricare..." />
+                <datalist id="pokemon-disponibili">{listaPokemon.map(pkm => <option key={pkm} value={pkm}>{tNomePkm(pkm)}</option>)}</datalist>
+                <button onClick={cercaPokemon} style={{...styles.btnCercaMini, padding: '10px 20px'}}>SCARICA</button>
               </div>
-            )}
+              
+              {pkmTrovato && (
+                <div style={{backgroundColor: '#1a1a1a', borderRadius: '15px', padding: '20px', display: 'flex', gap: '20px', alignItems: 'center', flexWrap: 'wrap'}}>
+                  <div style={{backgroundColor:'#222', borderRadius: '50%', padding: '15px', display:'flex', justifyContent:'center', alignItems:'center'}}>
+                    {renderImmagine('pokemon', pkmTrovato.currentForm || pkmTrovato.Name, {width: '100px', height: '100px', objectFit: 'contain'})}
+                  </div>
+                  <div style={{flex: 1, minWidth: '200px'}}>
+                    <h2 style={{margin: '0 0 10px 0', color: '#fff'}}>{tNomePkm(pkmTrovato.currentForm || pkmTrovato.Name)}</h2>
+                    <div style={{display: 'flex', gap: '5px', marginBottom: '15px'}}>
+                      <span style={{...styles.typeBadge, backgroundColor: typeColors[pkmTrovato.Type1]}}>{tradTipi[pkmTrovato.Type1]}</span>
+                      {pkmTrovato.Type2 && pkmTrovato.Type2 !== "None" && <span style={{...styles.typeBadge, backgroundColor: typeColors[pkmTrovato.Type2]}}>{tradTipi[pkmTrovato.Type2]}</span>}
+                    </div>
+                    <button onClick={aggiungiASquadra} style={{...styles.btnSuccess, padding: '10px'}}>+ INSERISCI NEL TEAM ATTUALE</button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* REGISTRO CATTURE E AVVISTAMENTI */}
+            <div style={styles.physicalSheet}>
+              <div style={{...styles.sheetHeader, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px'}}>
+                <h2 style={{margin: 0}}>REGISTRO NAZIONALE</h2>
+                <div style={{display: 'flex', gap: '10px'}}>
+                  <div style={{backgroundColor: '#111', padding: '5px 15px', borderRadius: '20px', fontSize: '14px'}}>👁️ Visti: <strong style={{color: '#4bcffa'}}>{Object.keys(pokedexProgress).length}</strong></div>
+                  <div style={{backgroundColor: '#111', padding: '5px 15px', borderRadius: '20px', fontSize: '14px'}}>🔴 Catturati: <strong style={{color: '#ff4757'}}>{Object.values(pokedexProgress).filter(v => v === 'catturato').length}</strong></div>
+                </div>
+              </div>
+
+              {/* FILTRI DEL REGISTRO */}
+              <div style={{display: 'flex', flexWrap: 'wrap', gap: '10px', marginBottom: '20px'}}>
+                <select style={{...styles.searchBar, flex: 1, minWidth: '150px'}} value={pokedexFiltro} onChange={e => setPokedexFiltro(e.target.value)}>
+                  <option value="all">Tutti i Pokémon</option>
+                  <option value="catturato">Solo Catturati</option>
+                  <option value="visto">Solo Visti</option>
+                  <option value="mancante">Mancanti</option>
+                </select>
+                <input style={{...styles.searchBar, flex: 2, minWidth: '200px'}} placeholder="Filtra il registro per nome..." value={pokedexFiltroNome} onChange={e => setPokedexFiltroNome(e.target.value)} />
+              </div>
+
+              {/* GRIGLIA POKEDEX */}
+              <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(110px, 1fr))', gap: '10px', maxHeight: '550px', overflowY: 'auto', paddingRight: '5px'}}>
+                {listaPokemon.filter(pkm => {
+                  const status = pokedexProgress[pkm];
+                  if (pokedexFiltro === "catturato" && status !== "catturato") return false;
+                  if (pokedexFiltro === "visto" && status !== "visto") return false;
+                  if (pokedexFiltro === "mancante" && status) return false;
+                  if (pokedexFiltroNome && !pkm.toLowerCase().includes(pokedexFiltroNome.toLowerCase())) return false;
+                  return true;
+                }).map(pkm => {
+                  const status = pokedexProgress[pkm];
+                  return (
+                    <div key={pkm} style={{backgroundColor: status === 'catturato' ? 'rgba(255, 71, 87, 0.1)' : '#1a1a1a', border: `1px solid ${status === 'catturato' ? '#ff4757' : status === 'visto' ? '#4bcffa' : '#333'}`, borderRadius: '10px', padding: '10px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px'}}>
+                      <div style={{width: '60px', height: '60px', display: 'flex', justifyContent: 'center', alignItems: 'center', filter: status ? 'none' : 'brightness(0) invert(0.3)', opacity: status ? 1 : 0.4}}>
+                        {renderImmagine('pokemon', pkm, {width: '50px', height: '50px', objectFit: 'contain'})}
+                      </div>
+                      <div style={{fontSize: '10px', fontWeight: 'bold', textAlign: 'center', color: status ? '#fff' : '#777'}}>{tNomePkm(pkm)}</div>
+                      <div style={{display: 'flex', width: '100%', gap: '5px'}}>
+                        <button onClick={() => togglePokedex(pkm, 'visto')} style={{flex: 1, padding: '5px', borderRadius: '5px', border: 'none', cursor: 'pointer', backgroundColor: status === 'visto' || status === 'catturato' ? '#4bcffa' : '#333', color: '#fff', fontSize: '10px'}} title="Segna come Visto">👁️</button>
+                        <button onClick={() => togglePokedex(pkm, 'catturato')} style={{flex: 1, padding: '5px', borderRadius: '5px', border: 'none', cursor: 'pointer', backgroundColor: status === 'catturato' ? '#ff4757' : '#333', color: '#fff', fontSize: '10px'}} title="Segna come Catturato">🔴</button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           </div>
         )}
         {tab === "battaglia" && (
