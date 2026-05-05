@@ -382,13 +382,14 @@ function App() {
         }
       });
 
-      // 2. Controlla e scarica l'Abilità mancante
-      const abilita = p.selectedAbility || p.Ability1;
-      if (abilita && abilita !== "None" && !dettagliAbilita[abilita]) {
-        fetchData('Abilities', abilita).then(data => {
+      // 2. Controlla e scarica le Abilità mancanti (Gestendo salvataggi nuovi e vecchi)
+      const abilitaAttuali = p.selectedAbilities || (p.selectedAbility ? [p.selectedAbility] : (p.Ability1 && p.Ability1 !== "None" ? [p.Ability1] : []));
+      abilitaAttuali.forEach(async (abilita) => {
+        if (abilita && typeof abilita === 'string' && abilita !== "None" && !dettagliAbilita[abilita]) {
+          const data = await fetchData('Abilities', abilita);
           if (data) setDettagliAbilita(prev => ({ ...prev, [abilita]: data }));
-        });
-      }
+        }
+      });
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [squadra]); // Si attiva da solo ogni volta che carichi o modifichi la squadra
@@ -500,7 +501,7 @@ function App() {
       setSquadra([...squadra, { 
         ...pkmTrovato, id: Date.now(), curHP: pkmTrovato.Vitality, curWill: pkmTrovato.Insight + 2,
         selectedMoves: ["", "", "", ""], activeStatus: [], heldItem: null, currentForm: pkmTrovato.Name,
-        selectedAbility: pkmTrovato.Ability1, // Impostiamo la prima abilità di default
+        selectedAbilities: [pkmTrovato.Ability1], // Ora è una lista!
         pkmSkills: { Brawl: 1, Channel: 1, Clash: 1, Evasion: 1, Alert: 1, Athletic: 1, Nature: 1, Stealth: 1, Allure: 1, Etiquette: 1, Intimidate: 1, Perform: 1 }
       }]);
       setPkmTrovato(null); setTab("squadra");
@@ -537,6 +538,61 @@ function App() {
         confidence: data.Confidence || 0 // Salviamo la Confidence estratta dal JSON
       } : p));
     }
+  };
+
+  const aggiungiAbilita = async (pId) => {
+    const inputEl = document.getElementById(`input-abilita-${pId}`);
+    if(!inputEl) return;
+    const nomeScritto = inputEl.value.trim();
+    if(!nomeScritto) return;
+
+    const data = await fetchData('Abilities', nomeScritto);
+
+    let abilitaDaAggiungere;
+    if (data) {
+      abilitaDaAggiungere = nomeScritto;
+      setDettagliAbilita(prev => ({...prev, [nomeScritto]: data}));
+    } else {
+      const conferma = window.confirm(`L'abilità "${nomeScritto}" non esiste nel database.\nVuoi crearla come Abilità Personalizzata?`);
+      if (!conferma) return;
+      abilitaDaAggiungere = {
+        isCustom: true,
+        Name: nomeScritto,
+        Description: "Inserisci una descrizione narrativa qui...",
+        Effect: "Inserisci l'effetto meccanico qui..."
+      };
+    }
+
+    setSquadra(squadra.map(p => {
+      if (p.id === pId) {
+        // Supporto per i vecchi salvataggi: se non c'è l'array, lo crea prendendo l'abilità attuale
+        const abilitaAttuali = p.selectedAbilities || (p.selectedAbility ? [p.selectedAbility] : (p.Ability1 && p.Ability1 !== "None" ? [p.Ability1] : []));
+        return {...p, selectedAbilities: [...abilitaAttuali, abilitaDaAggiungere]};
+      }
+      return p;
+    }));
+    inputEl.value = "";
+  };
+
+  const rimuoviAbilita = (pId, indexAbilita) => {
+    setSquadra(squadra.map(p => {
+      if (p.id === pId) {
+        const abilitaAttuali = p.selectedAbilities || (p.selectedAbility ? [p.selectedAbility] : [p.Ability1]);
+        return {...p, selectedAbilities: abilitaAttuali.filter((_, i) => i !== indexAbilita)};
+      }
+      return p;
+    }));
+  };
+
+  const aggiornaAbilitaCustom = (pId, indexAbilita, campo, valore) => {
+    setSquadra(squadra.map(p => {
+      if (p.id === pId) {
+        const abilitaAttuali = p.selectedAbilities || (p.selectedAbility ? [p.selectedAbility] : [p.Ability1]);
+        abilitaAttuali[indexAbilita] = { ...abilitaAttuali[indexAbilita], [campo]: valore };
+        return {...p, selectedAbilities: abilitaAttuali};
+      }
+      return p;
+    }));
   };
 
   const aggiungiMossa = async (pId) => {
@@ -947,31 +1003,56 @@ function App() {
 
                 {/* ABILITÀ E DATI FISICI (Si incolonnano da soli su mobile) */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 250px), 1fr))', gap: '10px', marginBottom: '20px' }}>
+                  {/* BOX ABILITÀ MULTIPLE E CUSTOM */}
                   <div style={styles.sheetInputBox}>
                     <label style={styles.sheetLabel}>ABILITÀ</label>
-                    <select 
-                      style={{...styles.sheetInput, backgroundColor: '#252525', width: '100%', cursor: 'pointer', fontSize: '14px', marginTop: '5px'}} 
-                      value={p.selectedAbility || p.Ability1} 
-                      onChange={(e) => {
-                        const nAb = e.target.value;
-                        setSquadra(squadra.map(x => x.id === p.id ? {...x, selectedAbility: nAb} : x));
-                        if (!dettagliAbilita[nAb] && nAb !== "None") fetchData('Abilities', nAb).then(d => { if(d) setDettagliAbilita(pr => ({...pr, [nAb]: d}))});
-                      }}
-                    >
-                      <option value={p.Ability1}>{p.Ability1}</option>
-                      {p.Ability2 && p.Ability2 !== "None" && <option value={p.Ability2}>{p.Ability2}</option>}
-                      {p.HiddenAbility && p.HiddenAbility !== "None" && <option value={p.HiddenAbility}>{p.HiddenAbility} (Nascosta)</option>}
-                    </select>
                     
-                    {(() => {
-                      const abInfo = dettagliAbilita[p.selectedAbility || p.Ability1];
-                      if (abInfo) return (
-                        <div style={{marginTop: '10px', backgroundColor: '#1a1a1a', padding: '10px', borderRadius: '5px', borderLeft: '3px solid #f1c40f'}}>
-                          <div style={{fontSize: '11px', color: '#ccc', fontStyle: 'italic', marginBottom: '5px'}}>{abInfo.Description}</div>
-                          <div style={{fontSize: '12px', color: '#f1c40f'}}><strong>EFFETTO:</strong> {abInfo.Effect}</div>
-                        </div>
-                      );
-                    })()}
+                    {/* BARRA AGGIUNTA ABILITÀ */}
+                    <div style={{display: 'flex', gap: '5px', marginTop: '5px'}}>
+                      <input list={`lista-abilita-${p.id}`} id={`input-abilita-${p.id}`} style={{...styles.searchBar, padding: '8px'}} placeholder="Aggiungi o inventa..." />
+                      <datalist id={`lista-abilita-${p.id}`}>
+                        {[p.Ability1, p.Ability2, p.HiddenAbility].filter(a => a && a !== "None").map(a => <option key={a} value={a} />)}
+                      </datalist>
+                      <button onClick={() => aggiungiAbilita(p.id)} style={styles.btnCercaMini}>+</button>
+                    </div>
+
+                    {/* LISTA DELLE ABILITÀ EQUIPAGGIATE */}
+                    <div style={{display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '10px'}}>
+                      {(p.selectedAbilities || (p.selectedAbility ? [p.selectedAbility] : (p.Ability1 && p.Ability1 !== "None" ? [p.Ability1] : []))).map((abItem, i) => {
+                        const isCustom = typeof abItem === 'object';
+                        const abNome = isCustom ? abItem.Name : abItem;
+                        const abInfo = isCustom ? abItem : dettagliAbilita[abNome];
+                        
+                        if (!abNome || abNome === "None") return null;
+
+                        return (
+                          <div key={i} style={{backgroundColor: '#1a1a1a', padding: '10px', borderRadius: '8px', borderLeft: isCustom ? '3px solid #f1c40f' : '3px solid #3498db', position: 'relative'}}>
+                            <button onClick={() => rimuoviAbilita(p.id, i)} style={{position: 'absolute', top: 5, right: 5, background: 'none', border: 'none', color: '#ff4757', cursor: 'pointer', fontWeight: 'bold'}}>✖</button>
+                            
+                            {isCustom ? (
+                              <div style={{display: 'flex', flexDirection: 'column', gap: '5px', paddingRight: '15px'}}>
+                                <div style={{color: '#f1c40f', fontSize: '10px', fontWeight: 'bold'}}>🛠️ ABILITÀ CUSTOM</div>
+                                <input value={abInfo.Name} onChange={e => aggiornaAbilitaCustom(p.id, i, 'Name', e.target.value)} style={{...styles.sheetInput, fontSize: '14px', borderBottom: '1px dashed #555'}} placeholder="Nome abilità..." />
+                                <textarea value={abInfo.Description} onChange={e => aggiornaAbilitaCustom(p.id, i, 'Description', e.target.value)} style={{backgroundColor: '#111', color: '#ccc', border: '1px solid #333', padding: '5px', borderRadius: '5px', fontSize: '11px', resize: 'vertical', minHeight: '40px'}} placeholder="Descrizione narrativa..." />
+                                <textarea value={abInfo.Effect} onChange={e => aggiornaAbilitaCustom(p.id, i, 'Effect', e.target.value)} style={{backgroundColor: '#111', color: '#f1c40f', border: '1px solid #333', padding: '5px', borderRadius: '5px', fontSize: '11px', resize: 'vertical', minHeight: '40px'}} placeholder="Effetto meccanico sulle regole..." />
+                              </div>
+                            ) : (
+                              <div style={{paddingRight: '15px'}}>
+                                <strong style={{color: '#fff', fontSize: '14px', display: 'block', marginBottom: '5px'}}>{abNome}</strong>
+                                {abInfo ? (
+                                  <>
+                                    <div style={{fontSize: '11px', color: '#ccc', fontStyle: 'italic', marginBottom: '5px'}}>{abInfo.Description}</div>
+                                    <div style={{fontSize: '12px', color: '#3498db'}}><strong>EFFETTO:</strong> {abInfo.Effect}</div>
+                                  </>
+                                ) : (
+                                  <div style={{fontSize: '11px', color: '#888'}}>Caricamento dati in corso...</div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
 
                   <div style={styles.sheetInputBox}>
