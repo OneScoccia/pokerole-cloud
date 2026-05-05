@@ -1191,112 +1191,124 @@ function App() {
 
                 {/* MOSSE POKEMON DINAMICHE E CUSTOM */}
                 <div style={{ marginTop: '25px', ...styles.sheetBox }}>
-                  <div style={{...styles.sheetBoxHeader, backgroundColor: '#c23616', display: 'flex', justifyContent: 'space-between', padding: '10px'}}>
+                  <div style={{...styles.sheetBoxHeader, backgroundColor: '#c23616', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px'}}>
                     <span style={{fontWeight: 'bold', fontSize: '14px'}}>MOVES ({p.selectedMoves.filter(m => m !== "").length})</span>
+                    <button 
+                      onClick={() => setSquadra(squadra.map(x => x.id === p.id ? {...x, mosseNascoste: !x.mosseNascoste} : x))} 
+                      style={{background: 'rgba(0,0,0,0.3)', border: '1px solid #ff4757', color: '#fff', borderRadius: '5px', padding: '4px 10px', cursor: 'pointer', fontWeight: 'bold', fontSize: '11px'}}
+                    >
+                      {p.mosseNascoste ? "🔽 ESPANDI" : "🔼 RIDUCI"}
+                    </button>
                   </div>
                   
-                  {/* BARRA RICERCA / AGGIUNTA MOSSA */}
-                  <div style={{padding: '15px', borderBottom: '1px solid #444', backgroundColor: '#1a1a1a'}}>
-                    <div style={{display:'flex', gap: 10}}>
-                      <input list={`lista-mosse-${p.id}`} id={`input-mossa-${p.id}`} style={styles.searchBar} placeholder="Digita mossa ufficiale o inventa nome..." />
-                      <datalist id={`lista-mosse-${p.id}`}>
-                        {p.Moves ? p.Moves
-                          .filter(m => (rankValues[m.Learned] || 0) <= (rankValues[trainer.rango || "Starter"] || 0))
-                          .map(m => <option key={m.Name} value={tMossa(m.Name)} />)
-                        : Object.values(tradMosseEngToIta).sort().map(m => <option key={m} value={m} />)}
-                      </datalist>
-                      <button onClick={() => aggiungiMossa(p.id)} style={styles.btnCercaMini}> + AGGIUNGI </button>
-                    </div>
-                  </div>
-
-                  <div style={{ padding: '15px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 250px), 1fr))', gap: '15px' }}>
-                    {p.selectedMoves.filter(m => m !== "").map((mossaItem, i) => {
-                      const isCustom = typeof mossaItem === 'object';
-                      const mossaNome = isCustom ? mossaItem.Name : mossaItem;
-                      const info = isCustom ? mossaItem : dettagliMosse[mossaNome];
-                      if (!info) return null;
-
-                      const isStab = (info.Type === p.Type1 || info.Type === p.Type2) && info.Type !== "None";
-                      let accAttrStr = "Dexterity", accAttrVal = p.Dexterity || 0;
-                      let dmgAttrStr = info.Category === "Special" ? "Special" : "Strength", dmgAttrVal = p[dmgAttrStr] || 0;
-                      let skillStr = info.Category === "Special" ? "Channel" : "Brawl", skillVal = p.pkmSkills?.[skillStr] || 0;
-
-                      if (info.Category === "Support") {
-                         accAttrStr = "Insight"; accAttrVal = p.Insight || 0;
-                         skillStr = "Nature"; skillVal = p.pkmSkills?.[skillStr] || 0;
-                      }
-
-                      const valAccInfo = parseInt(info.Accuracy) || 0;
-                      const valDmgInfo = parseInt(info.Power || info.Damage);
-                      
-                      const accTotal = accAttrVal + skillVal + valAccInfo;
-                      const dmgTotal = !isNaN(valDmgInfo) && valDmgInfo !== 0 ? (dmgAttrVal + valDmgInfo + (isStab ? 1 : 0)) : "-";
-
-                      return (
-                        <div key={i} style={{...styles.sheetMoveCard, position: 'relative', borderTop: isCustom ? `3px solid #f1c40f` : `1px solid #444`}}>
-                          <button onClick={() => rimuoviMossa(p.id, i)} style={{position: 'absolute', top: 5, right: 5, background: 'none', border: 'none', color: '#ff4757', cursor: 'pointer', fontWeight: 'bold'}}>✖</button>
-                          
-                          {isCustom ? (
-                            /* --- EDITOR MOSSA CUSTOM --- */
-                            <div style={{display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '10px'}}>
-                              <div style={{color: '#f1c40f', fontSize: '10px', fontWeight: 'bold'}}>🛠️ MOSSA CUSTOM</div>
-                              <input value={info.Name} onChange={e => aggiornaMossaCustom(p.id, i, 'Name', e.target.value)} style={{...styles.sheetInput, borderBottom: '1px dashed #555', paddingBottom: '3px'}} placeholder="Nome mossa..." />
-                              
-                              <div style={{display: 'flex', gap: '5px'}}>
-                                <select value={info.Type} onChange={e => aggiornaMossaCustom(p.id, i, 'Type', e.target.value)} style={{...styles.sheetMiniInput, width: '50%', fontSize: '11px', backgroundColor: typeColors[info.Type]}}>
-                                  {Object.keys(tradTipi).filter(t=>t!=='None').map(t => <option key={t} value={t} style={{backgroundColor: '#111'}}>{tradTipi[t]}</option>)}
-                                </select>
-                                <select value={info.Category} onChange={e => aggiornaMossaCustom(p.id, i, 'Category', e.target.value)} style={{...styles.sheetMiniInput, width: '50%', fontSize: '11px'}}>
-                                  <option value="Physical">Fisico</option><option value="Special">Speciale</option><option value="Support">Supporto</option>
-                                </select>
-                              </div>
-
-                              <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
-                                <span style={{fontSize: '11px', color: '#aaa'}}>ACC:<input type="number" value={info.Accuracy} onChange={e => aggiornaMossaCustom(p.id, i, 'Accuracy', parseInt(e.target.value)||0)} style={{...styles.sheetMiniInput, marginLeft: '5px', width: '35px'}} /></span>
-                                <span style={{fontSize: '11px', color: '#aaa'}}>PWR:<input type="number" value={info.Power} onChange={e => aggiornaMossaCustom(p.id, i, 'Power', parseInt(e.target.value)||0)} style={{...styles.sheetMiniInput, marginLeft: '5px', width: '35px'}} /></span>
-                              </div>
-
-                              <div style={{marginTop: '5px', borderTop: '1px solid #333', paddingTop: '5px'}}>
-                                <div style={{marginBottom: '5px'}}><strong style={{color: '#fff', fontSize: '12px'}}>🎯 TOT ACC: <span style={{color: '#2ed573'}}>{accTotal}</span></strong> <span style={{fontSize: '9px', color: '#888'}}>({tradStats[accAttrStr]}+{tradPkmSkills[skillStr]}+{valAccInfo})</span></div>
-                                {dmgTotal !== "-" && <div><strong style={{color: '#fff', fontSize: '12px'}}>💥 TOT DMG: <span style={{color: '#ff4757'}}>{dmgTotal}</span></strong> <span style={{fontSize: '9px', color: '#888'}}>({tradStats[dmgAttrStr]}+{valDmgInfo}{isStab?'+1 STAB':''})</span></div>}
-                              </div>
-
-                              <textarea value={info.Effect} onChange={e => aggiornaMossaCustom(p.id, i, 'Effect', e.target.value)} style={{backgroundColor: '#111', color: '#ddd', border: '1px solid #333', padding: '8px', borderRadius: '5px', fontSize: '11px', resize: 'vertical', minHeight: '50px'}} placeholder="Effetti aggiuntivi..." />
-                            </div>
-                          ) : (
-                            /* --- MOSSA NORMALE DB --- */
-                            <div style={{fontSize: '12px', marginTop: '10px'}}>
-                              <div style={{display:'flex', justifyContent:'space-between', marginBottom: '8px', paddingRight: '15px'}}>
-                                <strong style={{fontSize: '16px', color: '#fff'}}>{tMossa(mossaNome)}</strong>
-                              </div>
-                              <div style={{display:'flex', justifyContent:'space-between', marginBottom: '8px'}}>
-                                <span style={{...styles.typeBadge, backgroundColor: typeColors[info.Type]}}>{tradTipi[info.Type]}</span>
-                                <span style={{fontWeight: 'bold', color: '#ccc'}}>{info.Category.toUpperCase()}</span>
-                              </div>
-                              
-                              <div style={{backgroundColor: '#1a1a1a', padding: '8px', borderRadius: '6px', borderLeft: `3px solid ${typeColors[info.Type]}`}}>
-                                <div style={{marginBottom: '5px'}}>
-                                  <strong style={{color: '#fff'}}>🎯 ACCURACY: <span style={{color: '#2ed573', fontSize: '14px'}}>{accTotal} Dice</span></strong>
-                                  <div style={{fontSize: '9px', color: '#888'}}>({tradStats[accAttrStr]} + {tradPkmSkills[skillStr]} + {valAccInfo} Acc)</div>
-                                </div>
-                                
-                                {dmgTotal !== "-" && (
-                                  <div style={{marginBottom: '5px'}}>
-                                    <strong style={{color: '#fff'}}>💥 DAMAGE: <span style={{color: '#ff4757', fontSize: '14px'}}>{dmgTotal} Dice</span></strong>
-                                    <div style={{fontSize: '9px', color: '#888'}}>({tradStats[dmgAttrStr]} + {valDmgInfo} Pwr{isStab ? ' + 1 STAB' : ''})</div>
-                                  </div>
-                                )}
-                                
-                                <div style={{fontSize: '11px', color:'#aaa', fontStyle:'italic', marginTop: '8px', borderTop: '1px solid #333', paddingTop: '5px'}}>
-                                  {info.Effect || info.Description}
-                                </div>
-                              </div>
-                            </div>
-                          )}
+                  {!p.mosseNascoste && (
+                    <>
+                      {/* BARRA RICERCA / AGGIUNTA MOSSA */}
+                      <div style={{padding: '15px', borderBottom: '1px solid #444', backgroundColor: '#1a1a1a'}}>
+                        <div style={{display:'flex', gap: 10}}>
+                          <input list={`lista-mosse-${p.id}`} id={`input-mossa-${p.id}`} style={styles.searchBar} placeholder="Digita mossa ufficiale o inventa nome..." />
+                          <datalist id={`lista-mosse-${p.id}`}>
+                            {p.Moves ? p.Moves
+                              .filter(m => (rankValues[m.Learned] || 0) <= (rankValues[trainer.rango || "Starter"] || 0))
+                              .map(m => <option key={m.Name} value={tMossa(m.Name)} />)
+                            : Object.values(tradMosseEngToIta).sort().map(m => <option key={m} value={m} />)}
+                          </datalist>
+                          <button onClick={() => aggiungiMossa(p.id)} style={styles.btnCercaMini}> + AGGIUNGI </button>
                         </div>
-                      );
-                    })}
-                  </div>
+                      </div>
+
+                      <div style={{ padding: '15px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 250px), 1fr))', gap: '15px' }}>
+                        {p.selectedMoves.filter(m => m !== "").map((mossaItem, i) => {
+                          const isCustom = typeof mossaItem === 'object';
+                          const mossaNome = isCustom ? mossaItem.Name : mossaItem;
+                          const info = isCustom ? mossaItem : dettagliMosse[mossaNome];
+                          if (!info) return null;
+
+                          const isStab = (info.Type === p.Type1 || info.Type === p.Type2) && info.Type !== "None";
+                          
+                          // eslint-disable-next-line no-unused-vars
+                          let accAttrStr = "Dexterity", accAttrVal = p.Dexterity || 0;
+                          let dmgAttrStr = info.Category === "Special" ? "Special" : "Strength", dmgAttrVal = p[dmgAttrStr] || 0;
+                          let skillStr = info.Category === "Special" ? "Channel" : "Brawl", skillVal = p.pkmSkills?.[skillStr] || 0;
+
+                          if (info.Category === "Support") {
+                             accAttrStr = "Insight"; accAttrVal = p.Insight || 0;
+                             skillStr = "Nature"; skillVal = p.pkmSkills?.[skillStr] || 0;
+                          }
+
+                          const valAccInfo = parseInt(info.Accuracy) || 0;
+                          const valDmgInfo = parseInt(info.Power || info.Damage);
+                          
+                          const accTotal = accAttrVal + skillVal + valAccInfo;
+                          const dmgTotal = !isNaN(valDmgInfo) && valDmgInfo !== 0 ? (dmgAttrVal + valDmgInfo + (isStab ? 1 : 0)) : "-";
+
+                          return (
+                            <div key={i} style={{...styles.sheetMoveCard, position: 'relative', borderTop: isCustom ? `3px solid #f1c40f` : `1px solid #444`}}>
+                              <button onClick={() => rimuoviMossa(p.id, i)} style={{position: 'absolute', top: 5, right: 5, background: 'none', border: 'none', color: '#ff4757', cursor: 'pointer', fontWeight: 'bold'}}>✖</button>
+                              
+                              {isCustom ? (
+                                /* --- EDITOR MOSSA CUSTOM --- */
+                                <div style={{display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '10px'}}>
+                                  <div style={{color: '#f1c40f', fontSize: '10px', fontWeight: 'bold'}}>🛠️ MOSSA CUSTOM</div>
+                                  <input value={info.Name} onChange={e => aggiornaMossaCustom(p.id, i, 'Name', e.target.value)} style={{...styles.sheetInput, borderBottom: '1px dashed #555', paddingBottom: '3px'}} placeholder="Nome mossa..." />
+                                  
+                                  <div style={{display: 'flex', gap: '5px'}}>
+                                    <select value={info.Type} onChange={e => aggiornaMossaCustom(p.id, i, 'Type', e.target.value)} style={{...styles.sheetMiniInput, width: '50%', fontSize: '11px', backgroundColor: typeColors[info.Type]}}>
+                                      {Object.keys(tradTipi).filter(t=>t!=='None').map(t => <option key={t} value={t} style={{backgroundColor: '#111'}}>{tradTipi[t]}</option>)}
+                                    </select>
+                                    <select value={info.Category} onChange={e => aggiornaMossaCustom(p.id, i, 'Category', e.target.value)} style={{...styles.sheetMiniInput, width: '50%', fontSize: '11px'}}>
+                                      <option value="Physical">Fisico</option><option value="Special">Speciale</option><option value="Support">Supporto</option>
+                                    </select>
+                                  </div>
+
+                                  <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+                                    <span style={{fontSize: '11px', color: '#aaa'}}>ACC:<input type="number" value={info.Accuracy} onChange={e => aggiornaMossaCustom(p.id, i, 'Accuracy', parseInt(e.target.value)||0)} style={{...styles.sheetMiniInput, marginLeft: '5px', width: '35px'}} /></span>
+                                    <span style={{fontSize: '11px', color: '#aaa'}}>PWR:<input type="number" value={info.Power} onChange={e => aggiornaMossaCustom(p.id, i, 'Power', parseInt(e.target.value)||0)} style={{...styles.sheetMiniInput, marginLeft: '5px', width: '35px'}} /></span>
+                                  </div>
+
+                                  <div style={{marginTop: '5px', borderTop: '1px solid #333', paddingTop: '5px'}}>
+                                    <div style={{marginBottom: '5px'}}><strong style={{color: '#fff', fontSize: '12px'}}>🎯 TOT ACC: <span style={{color: '#2ed573'}}>{accTotal}</span></strong> <span style={{fontSize: '9px', color: '#888'}}>({tradStats[accAttrStr]}+{tradPkmSkills[skillStr]}+{valAccInfo})</span></div>
+                                    {dmgTotal !== "-" && <div><strong style={{color: '#fff', fontSize: '12px'}}>💥 TOT DMG: <span style={{color: '#ff4757'}}>{dmgTotal}</span></strong> <span style={{fontSize: '9px', color: '#888'}}>({tradStats[dmgAttrStr]}+{valDmgInfo}{isStab?'+1 STAB':''})</span></div>}
+                                  </div>
+
+                                  <textarea value={info.Effect} onChange={e => aggiornaMossaCustom(p.id, i, 'Effect', e.target.value)} style={{backgroundColor: '#111', color: '#ddd', border: '1px solid #333', padding: '8px', borderRadius: '5px', fontSize: '11px', resize: 'vertical', minHeight: '50px'}} placeholder="Effetti aggiuntivi..." />
+                                </div>
+                              ) : (
+                                /* --- MOSSA NORMALE DB --- */
+                                <div style={{fontSize: '12px', marginTop: '10px'}}>
+                                  <div style={{display:'flex', justifyContent:'space-between', marginBottom: '8px', paddingRight: '15px'}}>
+                                    <strong style={{fontSize: '16px', color: '#fff'}}>{tMossa(mossaNome)}</strong>
+                                  </div>
+                                  <div style={{display:'flex', justifyContent:'space-between', marginBottom: '8px'}}>
+                                    <span style={{...styles.typeBadge, backgroundColor: typeColors[info.Type]}}>{tradTipi[info.Type]}</span>
+                                    <span style={{fontWeight: 'bold', color: '#ccc'}}>{info.Category.toUpperCase()}</span>
+                                  </div>
+                                  
+                                  <div style={{backgroundColor: '#1a1a1a', padding: '8px', borderRadius: '6px', borderLeft: `3px solid ${typeColors[info.Type]}`}}>
+                                    <div style={{marginBottom: '5px'}}>
+                                      <strong style={{color: '#fff'}}>🎯 ACCURACY: <span style={{color: '#2ed573', fontSize: '14px'}}>{accTotal} Dice</span></strong>
+                                      <div style={{fontSize: '9px', color: '#888'}}>({tradStats[accAttrStr]} + {tradPkmSkills[skillStr]} + {valAccInfo} Acc)</div>
+                                    </div>
+                                    
+                                    {dmgTotal !== "-" && (
+                                      <div style={{marginBottom: '5px'}}>
+                                        <strong style={{color: '#fff'}}>💥 DAMAGE: <span style={{color: '#ff4757', fontSize: '14px'}}>{dmgTotal} Dice</span></strong>
+                                        <div style={{fontSize: '9px', color: '#888'}}>({tradStats[dmgAttrStr]} + {valDmgInfo} Pwr{isStab ? ' + 1 STAB' : ''})</div>
+                                      </div>
+                                    )}
+                                    
+                                    <div style={{fontSize: '11px', color:'#aaa', fontStyle:'italic', marginTop: '8px', borderTop: '1px solid #333', paddingTop: '5px'}}>
+                                      {info.Effect || info.Description}
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </>
+                  )}
                 </div>
                 <div style={{textAlign: 'right', marginTop: '10px'}}><button onClick={() => setSquadra(squadra.filter(x => x.id !== p.id))} style={styles.btnDelPkm}>RIMUOVI</button></div>
               </div>
