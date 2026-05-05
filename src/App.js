@@ -371,8 +371,8 @@ function App() {
     
     squadra.forEach(p => {
       // 1. Controlla e scarica le Mosse mancanti
-      p.selectedMoves.forEach(async (mossa) => {
-        if (mossa && !dettagliMosse[mossa]) {
+      (p.selectedMoves || []).forEach(async (mossa) => {
+        if (mossa && typeof mossa === 'string' && !dettagliMosse[mossa]) {
           const data = await fetchData('Moves', mossa);
           if (data) setDettagliMosse(prev => ({ ...prev, [mossa]: data }));
         }
@@ -535,6 +535,81 @@ function App() {
     }
   };
 
+  const aggiungiMossa = async (pId) => {
+    const inputEl = document.getElementById(`input-mossa-${pId}`);
+    if(!inputEl) return;
+    const nomeFormattato = inputEl.value.trim();
+    if(!nomeFormattato) return;
+
+    // Recupera i dati del Pokémon a cui stiamo dando la mossa
+    const p = squadra.find(x => x.id === pId);
+    if (!p) return;
+
+    // Cerca il nome inglese se inserito in italiano
+    const nomeIngleseDB = Object.keys(tradMosseEngToIta).find(k => tradMosseEngToIta[k].toLowerCase() === nomeFormattato.toLowerCase()) || nomeFormattato;
+    const data = await fetchData('Moves', nomeIngleseDB);
+
+    let mossaDaAggiungere;
+    if (data) {
+      // --- CONTROLLO LEARNSET E RANGO ---
+      const moveLearned = p.Moves?.find(m => m.Name === nomeIngleseDB);
+      if (!moveLearned) {
+        if (!window.confirm(`⚠️ ATTENZIONE: ${tNomePkm(p.Name)} normalmente non può imparare "${tMossa(nomeIngleseDB)}".\nVuoi forzare l'inserimento per volere del Master?`)) return;
+      } else {
+        const mRank = rankValues[moveLearned.Learned] || 0;
+        const tRank = rankValues[trainer.rango || "Starter"] || 0;
+        if (mRank > tRank) {
+          if (!window.confirm(`⚠️ RANGO INSUFFICIENTE: "${tMossa(nomeIngleseDB)}" richiede il rango ${moveLearned.Learned} (Il tuo Allenatore è ${trainer.rango || "Starter"}).\nVuoi forzare l'inserimento lo stesso?`)) return;
+        }
+      }
+
+      mossaDaAggiungere = nomeIngleseDB; // Mossa ufficiale (salviamo solo il nome)
+      setDettagliMosse(prev => ({...prev, [nomeIngleseDB]: data}));
+    } else {
+      const conferma = window.confirm(`La mossa "${nomeFormattato}" non esiste nel database.\nVuoi crearla come Mossa Personalizzata per questo Pokémon?`);
+      if (!conferma) return;
+      mossaDaAggiungere = {
+        isCustom: true,
+        Name: nomeFormattato,
+        Type: "Normal",
+        Category: "Physical",
+        Power: 0,
+        Accuracy: 0,
+        Effect: "Descrivi l'effetto qui..."
+      };
+    }
+
+    setSquadra(squadra.map(x => {
+      if (x.id === pId) {
+        const mosseAttuali = (x.selectedMoves || []).filter(m => m !== "");
+        return {...x, selectedMoves: [...mosseAttuali, mossaDaAggiungere]};
+      }
+      return x;
+    }));
+    inputEl.value = ""; // Pulisce la barra
+  };
+
+  const rimuoviMossa = (pId, indexMossa) => {
+    setSquadra(squadra.map(p => {
+      if (p.id === pId) {
+        const mosseAttuali = (p.selectedMoves || []).filter(m => m !== "");
+        return {...p, selectedMoves: mosseAttuali.filter((_, i) => i !== indexMossa)};
+      }
+      return p;
+    }));
+  };
+
+  const aggiornaMossaCustom = (pId, indexMossa, campo, valore) => {
+    setSquadra(squadra.map(p => {
+      if (p.id === pId) {
+        const mosseAttuali = (p.selectedMoves || []).filter(m => m !== "");
+        mosseAttuali[indexMossa] = { ...mosseAttuali[indexMossa], [campo]: valore };
+        return {...p, selectedMoves: mosseAttuali};
+      }
+      return p;
+    }));
+  };
+
   const renderImmagine = (tipo, nome, stile) => {
     if (!nome) return null;
     
@@ -654,7 +729,7 @@ function App() {
         {tab === "trainer" && (
           <div style={styles.physicalSheet}>
             <div style={styles.sheetHeader}>
-              <h1 style={{margin: 0, fontSize: '28px', letterSpacing: '2px'}}>TRAINER'S LICENCE</h1>
+              <h1 style={{margin: 0, fontSize: '28px', letterSpacing: '2px'}}>LICENZA ALLENATORE</h1>
             </div>
 
             {/* IDENTITY INFO */}
@@ -890,7 +965,7 @@ function App() {
                   </div>
                 </div>
 
-                {/* VITALI (PS, Volontà, Fiducia, Lealtà, EXP) */}
+                {/* VITALI (PS, Volontà, Fiducia, Lealtà, CORRUZIONE) */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 120px), 1fr))', gap: '10px', marginBottom: '20px' }}>
                   <div style={{...styles.sheetInputBox, backgroundColor: '#2d1b1b', borderColor: '#ff4757', alignItems: 'center', justifyContent: 'space-between'}}>
                     <label style={{...styles.sheetLabel, color: '#ff4757', textAlign: 'center'}}>PS</label>
@@ -921,18 +996,18 @@ function App() {
                     </div>
                   </div>
 
-                  <div style={{...styles.sheetInputBox, backgroundColor: '#331b2d', borderColor: '#e84393'}}>
-                    <label style={{...styles.sheetLabel, color: '#e84393', textAlign: 'center'}}>LOYALTY</label>
+                  <div style={{...styles.sheetInputBox, backgroundColor: '#1b3320', borderColor: '#2ed573'}}>
+                    <label style={{...styles.sheetLabel, color: '#2ed573', textAlign: 'center'}}>LOYALTY</label>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', marginTop: '5px' }}>
-                      <button onClick={() => setSquadra(squadra.map(x => x.id === p.id ? {...x, loyalty: Math.max(0, (x.loyalty || 0) - 1)} : x))} style={{...styles.btnCircleMin, borderColor: '#e84393', color: '#e84393'}}>-</button>
-                      <span style={{ fontSize: '20px', color: '#e84393', fontWeight: 'bold' }}>{p.loyalty || 0}</span>
-                      <button onClick={() => setSquadra(squadra.map(x => x.id === p.id ? {...x, loyalty: Math.min(5, (x.loyalty || 0) + 1)} : x))} style={{...styles.btnCircleMin, borderColor: '#e84393', color: '#e84393'}}>+</button>
+                      <button onClick={() => setSquadra(squadra.map(x => x.id === p.id ? {...x, loyalty: Math.max(0, (x.loyalty || 0) - 1)} : x))} style={{...styles.btnCircleMin, borderColor: '#2ed573', color: '#2ed573'}}>-</button>
+                      <span style={{ fontSize: '20px', color: '#2ed573', fontWeight: 'bold' }}>{p.loyalty || 0}</span>
+                      <button onClick={() => setSquadra(squadra.map(x => x.id === p.id ? {...x, loyalty: Math.min(5, (x.loyalty || 0) + 1)} : x))} style={{...styles.btnCircleMin, borderColor: '#2ed573', color: '#2ed573'}}>+</button>
                     </div>
                   </div>
 
-                  <div style={{...styles.sheetInputBox, backgroundColor: '#1b3320', borderColor: '#2ed573'}}>
-                    <label style={{...styles.sheetLabel, color: '#2ed573', textAlign: 'center'}}>EXP</label>
-                    <input type="number" style={{...styles.sheetInput, color: '#2ed573', textAlign: 'center', fontSize: '24px', width: '100%', marginTop: '3px'}} value={p.exp || 0} onChange={e => setSquadra(squadra.map(x => x.id === p.id ? {...x, exp: parseInt(e.target.value) || 0} : x))} />
+                  <div style={{...styles.sheetInputBox, backgroundColor: '#331b2d', borderColor: '#e84393'}}>
+                    <label style={{...styles.sheetLabel, color: '#e84393', textAlign: 'center'}}>CORRUZIONE</label>
+                    <input type="number" style={{...styles.sheetInput, color: '#e84393', textAlign: 'center', fontSize: '24px', width: '100%', marginTop: '3px'}} value={p.corruzione || 0} onChange={e => setSquadra(squadra.map(x => x.id === p.id ? {...x, corruzione: parseInt(e.target.value) || 0} : x))} />
                   </div>
                 </div>
 
@@ -1015,78 +1090,86 @@ function App() {
                   </div>
                 </div>
 
-                {/* MOSSE POKEMON */}
+                {/* MOSSE POKEMON DINAMICHE E CUSTOM */}
                 <div style={{ marginTop: '25px', ...styles.sheetBox }}>
-                  <div style={{...styles.sheetBoxHeader, backgroundColor: '#c23616'}}>MOVES</div>
+                  <div style={{...styles.sheetBoxHeader, backgroundColor: '#c23616', display: 'flex', justifyContent: 'space-between', padding: '10px'}}>
+                    <span style={{fontWeight: 'bold', fontSize: '14px'}}>MOVES ({p.selectedMoves.filter(m => m !== "").length})</span>
+                  </div>
+                  
+                  {/* BARRA RICERCA / AGGIUNTA MOSSA */}
+                  <div style={{padding: '15px', borderBottom: '1px solid #444', backgroundColor: '#1a1a1a'}}>
+                    <div style={{display:'flex', gap: 10}}>
+                      <input list={`lista-mosse-${p.id}`} id={`input-mossa-${p.id}`} style={styles.searchBar} placeholder="Digita mossa ufficiale o inventa nome..." />
+                      <datalist id={`lista-mosse-${p.id}`}>
+                        {p.Moves ? p.Moves
+                          .filter(m => (rankValues[m.Learned] || 0) <= (rankValues[trainer.rango || "Starter"] || 0))
+                          .map(m => <option key={m.Name} value={tMossa(m.Name)} />)
+                        : Object.values(tradMosseEngToIta).sort().map(m => <option key={m} value={m} />)}
+                      </datalist>
+                      <button onClick={() => aggiungiMossa(p.id)} style={styles.btnCercaMini}> + AGGIUNGI </button>
+                    </div>
+                  </div>
+
                   <div style={{ padding: '15px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 250px), 1fr))', gap: '15px' }}>
-                    {[0, 1, 2, 3].map(i => {
-                      const mossaNome = p.selectedMoves[i];
-                      const info = dettagliMosse[mossaNome];
-                      let accTotal = 0, dmgTotal = "-", accString = "", dmgString = "", isStab = false;
-                      
-                      if (info) {
-                        const accVal = parseInt(info.Accuracy) || 0;
-                        const dmgVal = parseInt(info.Power || info.Damage) || "-";
-                        isStab = (info.Type === p.Type1 || info.Type === p.Type2) && info.Type !== "None";
-                        
-                        // Logica Calcolo Dadi in base alla Categoria della mossa
-                        let accAttrStr = "Dexterity";
-                        let accAttrVal = p.Dexterity || 0;
-                        let dmgAttrStr = info.Category === "Special" ? "Special" : "Strength";
-                        let dmgAttrVal = p[dmgAttrStr] || 0;
-                        let skillStr = info.Category === "Special" ? "Channel" : "Brawl";
-                        let skillVal = p.pkmSkills?.[skillStr] || 0;
+                    {p.selectedMoves.filter(m => m !== "").map((mossaItem, i) => {
+                      const isCustom = typeof mossaItem === 'object';
+                      const mossaNome = isCustom ? mossaItem.Name : mossaItem;
+                      const info = isCustom ? mossaItem : dettagliMosse[mossaNome];
+                      if (!info) return null;
 
-                        if (info.Category === "Support") {
-                           accAttrStr = "Insight";
-                           accAttrVal = p.Insight || 0;
-                           skillStr = "Nature"; // Le mosse di supporto usano spesso Nature o Channel
-                           skillVal = p.pkmSkills?.[skillStr] || 0;
-                        }
+                      const isStab = (info.Type === p.Type1 || info.Type === p.Type2) && info.Type !== "None";
+                      let accAttrStr = "Dexterity", accAttrVal = p.Dexterity || 0;
+                      let dmgAttrStr = info.Category === "Special" ? "Special" : "Strength", dmgAttrVal = p[dmgAttrStr] || 0;
+                      let skillStr = info.Category === "Special" ? "Channel" : "Brawl", skillVal = p.pkmSkills?.[skillStr] || 0;
 
-                        accTotal = accAttrVal + skillVal + accVal;
-                        accString = `(${tradStats[accAttrStr]} + ${tradPkmSkills[skillStr]} + ${accVal} Acc)`;
-
-                        if (dmgVal !== "-") {
-                           dmgTotal = dmgAttrVal + dmgVal + (isStab ? 1 : 0);
-                           dmgString = `(${tradStats[dmgAttrStr]} + ${dmgVal} Pwr${isStab ? ' + 1 STAB' : ''})`;
-                        }
+                      if (info.Category === "Support") {
+                         accAttrStr = "Insight"; accAttrVal = p.Insight || 0;
+                         skillStr = "Nature"; skillVal = p.pkmSkills?.[skillStr] || 0;
                       }
 
+                      const valAccInfo = parseInt(info.Accuracy) || 0;
+                      const valDmgInfo = parseInt(info.Power || info.Damage);
+                      
+                      const accTotal = accAttrVal + skillVal + valAccInfo;
+                      const dmgTotal = !isNaN(valDmgInfo) && valDmgInfo !== 0 ? (dmgAttrVal + valDmgInfo + (isStab ? 1 : 0)) : "-";
+
                       return (
-                        <div key={i} style={styles.sheetMoveCard}>
-                          <select 
-                            style={{...styles.sheetInput, backgroundColor: '#252525', width: '100%', cursor: 'pointer', outline: 'none', border: 'none', borderBottom: '2px solid #555', paddingBottom: '5px', marginBottom: '10px'}} 
-                            value={mossaNome} 
-                            onChange={(e) => {
-                              const nuovaMossa = e.target.value;
-                              if (!nuovaMossa) {
-                                const n = [...p.selectedMoves]; n[i] = "";
-                                setSquadra(squadra.map(x => x.id === p.id ? {...x, selectedMoves: n} : x));
-                                return;
-                              }
-                              const moveInfoPkm = p.Moves.find(m => m.Name === nuovaMossa);
-                              const mossaRank = moveInfoPkm?.Learn || moveInfoPkm?.Rank || moveInfoPkm?.Learned || "Starter";
-                              const valAllenatore = rankValues[trainer.rango || "Starter"] || 0;
-                              const valMossa = rankValues[mossaRank] || 0;
-
-                              if (valMossa > valAllenatore) {
-                                const conferma = window.confirm(`⚠️ ATTENZIONE!\nQuesta mossa richiede il rango [${mossaRank}], ma il tuo allenatore è solo [${trainer.rango || "Starter"}].\n\nVuoi aggiungerla ugualmente?`);
-                                if (!conferma) return; 
-                              }
-
-                              const n = [...p.selectedMoves]; n[i] = nuovaMossa;
-                              setSquadra(squadra.map(x => x.id === p.id ? {...x, selectedMoves: n} : x));
-                            }}>
-                            <option value="">-- Seleziona --</option>
-                            {p.Moves.map(m => {
-                              const r = m.Learn || m.Rank || m.Learned || "Starter";
-                              return <option key={m.Name} value={m.Name}>{tMossa(m.Name)} [{r}]</option>;
-                            })}
-                          </select>
+                        <div key={i} style={{...styles.sheetMoveCard, position: 'relative', borderTop: isCustom ? `3px solid #f1c40f` : `1px solid #444`}}>
+                          <button onClick={() => rimuoviMossa(p.id, i)} style={{position: 'absolute', top: 5, right: 5, background: 'none', border: 'none', color: '#ff4757', cursor: 'pointer', fontWeight: 'bold'}}>✖</button>
                           
-                          {info && (
-                            <div style={{fontSize: '12px'}}>
+                          {isCustom ? (
+                            /* --- EDITOR MOSSA CUSTOM --- */
+                            <div style={{display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '10px'}}>
+                              <div style={{color: '#f1c40f', fontSize: '10px', fontWeight: 'bold'}}>🛠️ MOSSA CUSTOM</div>
+                              <input value={info.Name} onChange={e => aggiornaMossaCustom(p.id, i, 'Name', e.target.value)} style={{...styles.sheetInput, borderBottom: '1px dashed #555', paddingBottom: '3px'}} placeholder="Nome mossa..." />
+                              
+                              <div style={{display: 'flex', gap: '5px'}}>
+                                <select value={info.Type} onChange={e => aggiornaMossaCustom(p.id, i, 'Type', e.target.value)} style={{...styles.sheetMiniInput, width: '50%', fontSize: '11px', backgroundColor: typeColors[info.Type]}}>
+                                  {Object.keys(tradTipi).filter(t=>t!=='None').map(t => <option key={t} value={t} style={{backgroundColor: '#111'}}>{tradTipi[t]}</option>)}
+                                </select>
+                                <select value={info.Category} onChange={e => aggiornaMossaCustom(p.id, i, 'Category', e.target.value)} style={{...styles.sheetMiniInput, width: '50%', fontSize: '11px'}}>
+                                  <option value="Physical">Fisico</option><option value="Special">Speciale</option><option value="Support">Supporto</option>
+                                </select>
+                              </div>
+
+                              <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+                                <span style={{fontSize: '11px', color: '#aaa'}}>ACC:<input type="number" value={info.Accuracy} onChange={e => aggiornaMossaCustom(p.id, i, 'Accuracy', parseInt(e.target.value)||0)} style={{...styles.sheetMiniInput, marginLeft: '5px', width: '35px'}} /></span>
+                                <span style={{fontSize: '11px', color: '#aaa'}}>PWR:<input type="number" value={info.Power} onChange={e => aggiornaMossaCustom(p.id, i, 'Power', parseInt(e.target.value)||0)} style={{...styles.sheetMiniInput, marginLeft: '5px', width: '35px'}} /></span>
+                              </div>
+
+                              <div style={{marginTop: '5px', borderTop: '1px solid #333', paddingTop: '5px'}}>
+                                <div style={{marginBottom: '5px'}}><strong style={{color: '#fff', fontSize: '12px'}}>🎯 TOT ACC: <span style={{color: '#2ed573'}}>{accTotal}</span></strong> <span style={{fontSize: '9px', color: '#888'}}>({tradStats[accAttrStr]}+{tradPkmSkills[skillStr]}+{valAccInfo})</span></div>
+                                {dmgTotal !== "-" && <div><strong style={{color: '#fff', fontSize: '12px'}}>💥 TOT DMG: <span style={{color: '#ff4757'}}>{dmgTotal}</span></strong> <span style={{fontSize: '9px', color: '#888'}}>({tradStats[dmgAttrStr]}+{valDmgInfo}{isStab?'+1 STAB':''})</span></div>}
+                              </div>
+
+                              <textarea value={info.Effect} onChange={e => aggiornaMossaCustom(p.id, i, 'Effect', e.target.value)} style={{backgroundColor: '#111', color: '#ddd', border: '1px solid #333', padding: '8px', borderRadius: '5px', fontSize: '11px', resize: 'vertical', minHeight: '50px'}} placeholder="Effetti aggiuntivi..." />
+                            </div>
+                          ) : (
+                            /* --- MOSSA NORMALE DB --- */
+                            <div style={{fontSize: '12px', marginTop: '10px'}}>
+                              <div style={{display:'flex', justifyContent:'space-between', marginBottom: '8px', paddingRight: '15px'}}>
+                                <strong style={{fontSize: '16px', color: '#fff'}}>{tMossa(mossaNome)}</strong>
+                              </div>
                               <div style={{display:'flex', justifyContent:'space-between', marginBottom: '8px'}}>
                                 <span style={{...styles.typeBadge, backgroundColor: typeColors[info.Type]}}>{tradTipi[info.Type]}</span>
                                 <span style={{fontWeight: 'bold', color: '#ccc'}}>{info.Category.toUpperCase()}</span>
@@ -1095,13 +1178,13 @@ function App() {
                               <div style={{backgroundColor: '#1a1a1a', padding: '8px', borderRadius: '6px', borderLeft: `3px solid ${typeColors[info.Type]}`}}>
                                 <div style={{marginBottom: '5px'}}>
                                   <strong style={{color: '#fff'}}>🎯 ACCURACY: <span style={{color: '#2ed573', fontSize: '14px'}}>{accTotal} Dice</span></strong>
-                                  <div style={{fontSize: '9px', color: '#888'}}>{accString}</div>
+                                  <div style={{fontSize: '9px', color: '#888'}}>({tradStats[accAttrStr]} + {tradPkmSkills[skillStr]} + {valAccInfo} Acc)</div>
                                 </div>
                                 
                                 {dmgTotal !== "-" && (
                                   <div style={{marginBottom: '5px'}}>
                                     <strong style={{color: '#fff'}}>💥 DAMAGE: <span style={{color: '#ff4757', fontSize: '14px'}}>{dmgTotal} Dice</span></strong>
-                                    <div style={{fontSize: '9px', color: '#888'}}>{dmgString}</div>
+                                    <div style={{fontSize: '9px', color: '#888'}}>({tradStats[dmgAttrStr]} + {valDmgInfo} Pwr{isStab ? ' + 1 STAB' : ''})</div>
                                   </div>
                                 )}
                                 
@@ -1287,10 +1370,11 @@ function App() {
                   {/* MOSSE IN EVIDENZA */}
                   <div style={{...styles.sheetBoxHeader, backgroundColor: '#c23616', borderRadius: '5px 5px 0 0'}}>MOVES</div>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 250px), 1fr))', gap: '10px', backgroundColor: '#222', padding: '15px', borderRadius: '0 0 10px 10px', border: '1px solid #444' }}>
-                    {[0, 1, 2, 3].map(i => {
-                      const mossaNome = p.selectedMoves[i];
-                      const info = dettagliMosse[mossaNome];
-                      if (!info) return null; // Mostra solo le mosse equipaggiate
+                    {p.selectedMoves.filter(m => m !== "").map((mossaItem, i) => {
+                      const isCustom = typeof mossaItem === 'object';
+                      const mossaNome = isCustom ? mossaItem.Name : mossaItem;
+                      const info = isCustom ? mossaItem : dettagliMosse[mossaNome];
+                      if (!info) return null;
                       
                       const isStab = (info.Type === p.Type1 || info.Type === p.Type2) && info.Type !== "None";
                       let accAttrStr = "Dexterity", accAttrVal = p.Dexterity || 0;
@@ -1302,13 +1386,16 @@ function App() {
                          skillStr = "Nature"; skillVal = p.pkmSkills?.[skillStr] || 0;
                       }
 
-                      const accTotal = accAttrVal + skillVal + (parseInt(info.Accuracy) || 0);
-                      const dmgTotal = parseInt(info.Power || info.Damage) ? (dmgAttrVal + parseInt(info.Power || info.Damage) + (isStab ? 1 : 0)) : "-";
+                      const valAccInfo = parseInt(info.Accuracy) || 0;
+                      const valDmgInfo = parseInt(info.Power || info.Damage);
+                      
+                      const accTotal = accAttrVal + skillVal + valAccInfo;
+                      const dmgTotal = !isNaN(valDmgInfo) && valDmgInfo !== 0 ? (dmgAttrVal + valDmgInfo + (isStab ? 1 : 0)) : "-";
 
                       return (
-                        <div key={i} style={{...styles.sheetMoveCard, backgroundColor: '#1a1a1a', borderLeft: `4px solid ${typeColors[info.Type]}`}}>
+                        <div key={i} style={{...styles.sheetMoveCard, backgroundColor: '#1a1a1a', borderLeft: `4px solid ${typeColors[info.Type]}`, borderTop: isCustom ? '2px solid #f1c40f' : 'none'}}>
                           <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px'}}>
-                            <strong style={{fontSize: '16px', color: '#fff'}}>{tMossa(mossaNome)}</strong>
+                            <strong style={{fontSize: '16px', color: isCustom ? '#f1c40f' : '#fff'}}>{isCustom ? '🛠️ ' : ''}{tMossa(mossaNome)}</strong>
                             <span style={styles.typeBadgeMini}>{info.Category}</span>
                           </div>
                           <div style={{display: 'flex', gap: '15px', marginBottom: '5px'}}>
