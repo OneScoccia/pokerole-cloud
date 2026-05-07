@@ -404,6 +404,44 @@ function App() {
     }
   };
 
+  const caricaAvatar = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        // Creiamo un canvas invisibile per rimpicciolire l'immagine
+        const canvas = document.createElement('canvas');
+        const MAX_SIZE = 200; // Avatar leggerissimo e perfetto per il cerchio
+        let width = img.width;
+        let height = img.height;
+
+        // Calcola le proporzioni
+        if (width > height) {
+          if (width > MAX_SIZE) { height *= MAX_SIZE / width; width = MAX_SIZE; }
+        } else {
+          if (height > MAX_SIZE) { width *= MAX_SIZE / height; height = MAX_SIZE; }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+
+        // Convertiamo l'immagine in un testo codificato (Base64, qualità 70%)
+        const base64String = canvas.toDataURL('image/jpeg', 0.7);
+        
+        // Salviamo la stringa nella scheda dell'allenatore
+        setTrainer({ ...trainer, avatar: base64String });
+        alert("✅ Foto caricata con successo in locale!\nRicordati di premere ☁️ SALVA in alto a destra per inviarla al server.");
+      };
+      img.src = event.target.result;
+    };
+    reader.readAsDataURL(file);
+  };
+
   const salvaSulCloud = async () => {
     if (!user) return;
     try {
@@ -810,6 +848,52 @@ function App() {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '10px', marginBottom: '15px' }}>
               <div style={styles.sheetInputBox}><label style={styles.sheetLabel}>NAME</label><input style={styles.sheetInput} value={trainer.nome || ""} onChange={e => setTrainer({...trainer, nome: e.target.value})} /></div>
               <div style={styles.sheetInputBox}><label style={styles.sheetLabel}>PLAYER</label><input style={styles.sheetInput} value={trainer.player || ""} onChange={e => setTrainer({...trainer, player: e.target.value})} /></div>
+            </div>
+
+            {/* BOX AVATAR */}
+            <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+              <div style={{
+                width: '120px', 
+                height: '120px', 
+                borderRadius: '50%', 
+                border: '3px solid #ff4757', 
+                margin: '0 auto', 
+                overflow: 'hidden', 
+                backgroundColor: '#111',
+                display: 'flex', 
+                justifyContent: 'center', 
+                alignItems: 'center',
+                boxShadow: '0 4px 10px rgba(0,0,0,0.5)'
+              }}>
+                {trainer.avatar ? (
+                  <img src={trainer.avatar} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                ) : (
+                  <span style={{ fontSize: '50px' }}>👤</span>
+                )}
+              </div>
+              
+              {/* Input nascosto per il file */}
+              <input 
+                type="file" 
+                id="avatar-upload" 
+                hidden 
+                onChange={caricaAvatar} 
+                accept="image/*" 
+              />
+              
+              {/* Tasto che attiva l'input nascosto */}
+              <button 
+                onClick={() => document.getElementById('avatar-upload').click()} 
+                style={{
+                  ...styles.btnCercaMini, 
+                  marginTop: '12px', 
+                  fontSize: '11px', 
+                  backgroundColor: '#444',
+                  padding: '5px 15px'
+                }}
+              >
+                📷 CAMBIA FOTO
+              </button>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '10px', marginBottom: '15px' }}>
